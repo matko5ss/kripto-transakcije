@@ -1,26 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kripto Transakcije
 
-## Getting Started
+Aplikacija za praćenje kripto transakcija na hrvatskom jeziku, slična [Etherscan.io](https://etherscan.io/), ali prilagođena hrvatskim korisnicima.
 
-First, run the development server:
+## O projektu
 
+Kripto Transakcije je web aplikacija koja omogućuje korisnicima pregled i pretraživanje Ethereum blockchain-a na hrvatskom jeziku. Aplikacija koristi [Moralis API](https://moralis.io/) za dohvaćanje podataka s blockchain-a.
+
+### Funkcionalnosti
+
+- Pregled zadnjih transakcija na Ethereum mreži
+- Pregled detalja pojedinačnih transakcija
+- Pregled blokova i njihovih detalja
+- Pregled adresa/novčanika i njihovog stanja
+- Pregled ERC-20 tokena
+- Praćenje cijene Ethereuma
+- Sve na hrvatskom jeziku!
+
+## Tehnologije
+
+- [Next.js](https://nextjs.org/) - React framework
+- [Tailwind CSS](https://tailwindcss.com/) - CSS framework
+- [Moralis API](https://moralis.io/) - API za dohvaćanje blockchain podataka
+- [Chart.js](https://www.chartjs.org/) - Biblioteka za grafikone
+- [React Icons](https://react-icons.github.io/react-icons/) - Ikone
+- [date-fns](https://date-fns.org/) - Biblioteka za rad s datumima
+
+## Pokretanje projekta
+
+### Preduvjeti
+
+- Node.js (preporučeno verzija 18 ili novija)
+- npm ili yarn
+- Moralis API ključ (možete ga dobiti besplatno na [Moralis.io](https://moralis.io/))
+
+### Instalacija
+
+1. Klonirajte repozitorij:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <url-repozitorija>
+cd kripto-transakcije
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Instalirajte ovisnosti:
+```bash
+npm install
+# ili
+yarn install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Pokrenite razvojni server:
+```bash
+npm run dev
+# ili
+yarn dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Otvorite [http://localhost:3000](http://localhost:3000) u vašem pregledniku.
 
-## Learn More
+## Konfiguracija
+
+API ključ za Moralis je već konfiguriran u aplikaciji. Ako želite koristiti svoj vlastiti ključ, možete ga promijeniti u datoteci `config/moralis.ts`.
+
+## Dodatne informacije
 
 To learn more about Next.js, take a look at the following resources:
 
