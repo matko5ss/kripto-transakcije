@@ -5,10 +5,15 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  basePath: '',
   trailingSlash: true,
-  // Specify the output directory for static export
   distDir: 'out',
+  // Only generate the homepage for static export
+  // This avoids issues with dynamic routes
+  exportPathMap: async function() {
+    return {
+      '/': { page: '/' }
+    };
+  }
 };
 
 export default nextConfig;
