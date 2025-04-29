@@ -411,24 +411,14 @@ async function dohvatiTransakcije(adresa, limit = 20) {
     }
     
     const data = await response.json();
-    console.log(`Dohvaćeni podaci:`, data);
+    console.log('Dohvaćene transakcije:', data);
     
-    if (data.status !== "1" && data.result !== "Max rate limit reached") {
-      throw new Error(`API greška: ${data.message}`);
+    if (data.status === "1" && data.result) {
+      return data.result;
+    } else {
+      console.error('Neispravan format odgovora za transakcije:', data);
+      return [];
     }
-    
-    // Transformiraj podatke u format koji aplikacija očekuje
-    return data.result.map(tx => ({
-      hash: tx.hash,
-      blockNumber: tx.blockNumber,
-      blockTimestamp: new Date(parseInt(tx.timeStamp) * 1000).toISOString(),
-      from: tx.from,
-      to: tx.to,
-      value: (parseFloat(tx.value) / 1e18).toFixed(6), // Konverzija iz wei u ETH
-      valueUsd: ((parseFloat(tx.value) / 1e18) * ethPrice.usd).toFixed(2), // Vrijednost u USD
-      gas: tx.gas,
-      gasPrice: tx.gasPrice
-    }));
   } catch (error) {
     console.error('Greška pri dohvaćanju transakcija:', error);
     return [];
@@ -443,34 +433,29 @@ async function dohvatiAdresu(adresa) {
     const balanceResponse = await fetch(`${ETHERSCAN_PROXY_URL}?action=balance&address=${adresa}`);
     
     if (!balanceResponse.ok) {
-      throw new Error(`API greška kod dohvaćanja stanja: ${balanceResponse.status}`);
+      throw new Error(`API greška: ${balanceResponse.status}`);
     }
     
     const balanceData = await balanceResponse.json();
-    console.log(`Dohvaćeni podaci za stanje adrese:`, balanceData);
+    console.log('Dohvaćeno stanje računa:', balanceData);
     
     if (balanceData.status !== "1") {
-      throw new Error(`API greška: ${balanceData.message}`);
+      throw new Error('Neispravan format odgovora za stanje računa');
     }
     
-    // Izračunaj vrijednost u USD
-    const balanceEth = parseFloat(balanceData.result) / 1e18;
-    const balanceUsd = balanceEth * ethPrice.usd;
-    
     // Dohvati transakcije za ovu adresu
-    const transakcije = await dohvatiTransakcije(adresa);
-    console.log(`Dohvaćeno ${transakcije.length} transakcija za adresu`);
+    const transactions = await dohvatiTransakcije(adresa);
+    console.log(`Dohvaćeno ${transactions.length} transakcija za adresu`);
     
     // Vrati podatke u formatu koji aplikacija očekuje
     return {
       adresa: adresa,
-      balance: balanceEth.toFixed(6), // Konverzija iz wei u ETH
-      balanceUsd: balanceUsd.toFixed(2), // Vrijednost u USD
-      transactions: transakcije.map(tx => tx.hash)
+      balance: balanceData.result,
+      transactions: transactions
     };
   } catch (error) {
-    console.error('Greška pri dohvaćanju podataka adrese:', error);
-    return null;
+    console.error('Greška pri dohvaćanju adrese:', error);
+    throw error;
   }
 }
 
@@ -561,217 +546,182 @@ function skratiHash(hash) {
 
 // Funkcija za pretraživanje
 async function pretrazi(upit) {
-  console.log("Funkcija pretrazi pozvana s upitom:", upit);
-  
   try {
+    console.log("Pretražujem:", upit);
+    
     // Prikaži indikator učitavanja
     prikaziUcitavanje();
     
-    // Provjera je li upit prazan
-    if (!upit || upit.trim() === '') {
-      prikaziGresku('Unesite adresu, hash transakcije ili broj bloka za pretraživanje');
+    // Provjeri je li upit prazan
+    if (!upit || upit.trim() === "") {
+      prikaziGresku("Unesite adresu, hash transakcije ili broj bloka za pretraživanje");
       return;
     }
     
-    // Čišćenje upita
-    upit = upit.trim().toLowerCase();
-    console.log("Očišćeni upit:", upit);
+    // Očisti upit
+    upit = upit.trim();
     
-    // Provjera je li upit adresa (0x...)
-    if (upit.startsWith('0x') && upit.length >= 40) {
-      console.log("Upit prepoznat kao Ethereum adresa");
-      
+    // Provjeri je li upit broj bloka
+    if (/^\d+$/.test(upit)) {
+      console.log("Upit je broj bloka");
+      const blok = await dohvatiBlok(upit);
+      if (blok) {
+        prikaziBlok(blok);
+      } else {
+        prikaziGresku(`Blok broj ${upit} nije pronađen`);
+      }
+      return;
+    }
+    
+    // Provjeri je li upit hash transakcije (0x + 64 heksadecimalna znaka)
+    if (/^0x[a-fA-F0-9]{64}$/.test(upit)) {
+      console.log("Upit je hash transakcije");
+      const transakcija = await dohvatiTransakciju(upit);
+      if (transakcija) {
+        prikaziTransakciju(transakcija);
+      } else {
+        prikaziGresku(`Transakcija ${upit} nije pronađena`);
+      }
+      return;
+    }
+    
+    // Provjeri je li upit Ethereum adresa (0x + 40 heksadecimalnih znakova)
+    if (/^0x[a-fA-F0-9]{40}$/.test(upit)) {
+      console.log("Upit je Ethereum adresa");
       try {
-        // Dohvati podatke za adresu
         const adresa = await dohvatiAdresu(upit);
-        
         if (adresa) {
-          console.log("Adresa pronađena:", adresa);
           prikaziAdresu(adresa);
         } else {
-          console.log("Adresa nije pronađena");
-          prikaziGresku("Adresa nije pronađena");
+          prikaziGresku(`Adresa ${upit} nije pronađena`);
         }
       } catch (error) {
-        console.error("Greška pri dohvaćanju adrese:", error);
-        prikaziGresku("Greška pri dohvaćanju podataka adrese: " + error.message);
+        prikaziGresku(`Greška pri dohvaćanju adrese: ${error.message}`);
       }
       return;
     }
     
-    // Provjera je li upit hash transakcije (0x...)
-    if (upit.startsWith("0x") && upit.length >= 60) {
-      try {
-        // Dohvati transakciju
-        const transakcija = await dohvatiTransakciju(upit);
-        
-        if (transakcija) {
-          prikaziTransakciju(transakcija);
-        } else {
-          prikaziGresku("Transakcija nije pronađena");
-        }
-      } catch (error) {
-        console.error("Greška pri dohvaćanju transakcije:", error);
-        prikaziGresku("Greška pri dohvaćanju transakcije: " + error.message);
-      }
-      return;
-    }
-    
-    // Provjera je li upit broj bloka
-    if (/^\d+$/.test(upit)) {
-      try {
-        // Dohvati blok
-        const blok = await dohvatiBlok(upit);
-        
-        if (blok) {
-          prikaziBlok(blok);
-        } else {
-          prikaziGresku("Blok nije pronađen");
-        }
-      } catch (error) {
-        console.error("Greška pri dohvaćanju bloka:", error);
-        prikaziGresku("Greška pri dohvaćanju bloka: " + error.message);
-      }
-      return;
-    }
-    
-    // Ako upit ne odgovara nijednom formatu
-    prikaziGresku("Nevažeći format upita. Unesite adresu, hash transakcije ili broj bloka.");
+    // Ako upit ne odgovara nijednom formatu, prikaži grešku
+    prikaziGresku(`Neispravan format upita: ${upit}. Unesite valjanu Ethereum adresu, hash transakcije ili broj bloka.`);
   } catch (error) {
-    console.error("Neočekivana greška u funkciji pretrazi:", error);
-    prikaziGresku("Neočekivana greška: " + error.message);
+    console.error("Greška pri pretraživanju:", error);
+    prikaziGresku(`Greška pri pretraživanju: ${error.message}`);
   }
-}
-
-// Funkcija za prikaz indikatora učitavanja
-function prikaziUcitavanje() {
-  const rezultatDiv = document.getElementById("rezultat-pretrage");
-  rezultatDiv.innerHTML = `
-    <div class="flex justify-center items-center p-10">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      <p class="ml-4 text-white">Učitavanje podataka...</p>
-    </div>
-  `;
-  rezultatDiv.style.display = "block";
-}
-
-// Funkcija za prikaz greške
-function prikaziGresku(poruka) {
-  console.error("Greška:", poruka);
-  
-  const rezultatDiv = document.getElementById("rezultat-pretrage");
-  rezultatDiv.innerHTML = `
-    <div class="bg-red-800 text-white p-4 rounded-lg shadow-lg mt-4">
-      <p class="font-semibold">Greška</p>
-      <p>${poruka}</p>
-    </div>
-  `;
-  rezultatDiv.style.display = "block";
 }
 
 // Funkcija za prikaz adrese
 async function prikaziAdresu(adresa) {
   console.log("Prikazujem adresu:", adresa);
   
-  // Pripremi HTML za prikaz adrese
-  const rezultatDiv = document.getElementById("rezultat-pretrage");
-
-  // Dohvati stvarne transakcije za ovu adresu
-  const transakcije = await dohvatiTransakcije(adresa.adresa);
-  console.log("Dohvaćene transakcije za adresu:", transakcije);
-
-  let transakcijeHTML = "";
-  transakcije.forEach((tx) => {
-    transakcijeHTML += `
-      <tr class="table-row">
-        <td class="px-4 py-3 text-sm text-blue-400">${skratiHash(tx.hash)}</td>
-        <td class="px-4 py-3 text-sm">
-          ${formatirajVrijeme(tx.blockTimestamp)}
-        </td>
-        <td class="px-4 py-3 text-sm">
-          ${
-            tx.from.toLowerCase() === adresa.adresa.toLowerCase()
-              ? `<span class="text-red-400">OUT</span>`
-              : `<span class="text-green-400">IN</span>`
-          }
-        </td>
-        <td class="px-4 py-3 text-sm">
-          ${
-            tx.from.toLowerCase() === adresa.adresa.toLowerCase()
-              ? skratiHash(tx.to)
-              : skratiHash(tx.from)
-          }
-        </td>
-        <td class="px-4 py-3 text-sm">${tx.value} ETH</td>
-        <td class="px-4 py-3 text-sm">$${tx.valueUsd}</td>
-      </tr>
-    `;
-  });
-
-  // Prikaži rezultat
-  rezultatDiv.innerHTML = `
-    <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
-      <h2 class="text-xl font-semibold text-white mb-4">Detalji adrese</h2>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <p class="text-gray-400">Adresa:</p>
-          <p class="text-white break-all">${adresa.adresa}</p>
+  if (!adresa || !adresa.adresa) {
+    prikaziGresku("Neispravan format adrese");
+    return;
+  }
+  
+  // Formatiraj stanje računa
+  const stanjeETH = parseFloat(adresa.balance) / 1e18;
+  
+  // Generiraj HTML za prikaz adrese
+  let html = `
+    <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+      <div class="p-6 border-b border-gray-700">
+        <h2 class="text-xl font-semibold text-white">Adresa</h2>
+        <p class="text-gray-300 break-all mt-2">${adresa.adresa}</p>
+      </div>
+      <div class="p-6">
+        <div class="flex flex-col md:flex-row justify-between mb-6">
+          <div class="mb-4 md:mb-0">
+            <h3 class="text-lg font-semibold text-white">Stanje</h3>
+            <p class="text-2xl font-bold text-green-400">${stanjeETH.toLocaleString('hr-HR', { minimumFractionDigits: 6, maximumFractionDigits: 6 })} ETH</p>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-white">Broj transakcija</h3>
+            <p class="text-2xl font-bold text-blue-400">${adresa.transactions.length}</p>
+          </div>
         </div>
         
-        <div>
-          <p class="text-gray-400">Stanje:</p>
-          <p class="text-white">${adresa.balance} ETH ($${adresa.balanceUsd})</p>
+        <!-- Tabovi za ETH i token transakcije -->
+        <div class="mb-4 border-b border-gray-700">
+          <div class="flex">
+            <button id="eth-tab" class="px-4 py-2 tab-active">ETH Transakcije</button>
+            <button id="token-tab" class="px-4 py-2 tab-inactive">Token Transakcije</button>
+          </div>
         </div>
-      </div>
-      
-      <!-- Tabovi za različite vrste transakcija -->
-      <div class="mb-4">
-        <div class="flex border-b border-gray-700">
-          <button class="px-4 py-2 text-white font-medium border-b-2 border-blue-500" id="tab-eth">ETH Transakcije</button>
-          <button class="px-4 py-2 text-gray-400 font-medium" id="tab-tokens">Token Transakcije</button>
-        </div>
-      </div>
-      
-      <!-- ETH transakcije -->
-      <div id="eth-transactions">
-        <h3 class="text-lg font-semibold text-white mb-2">ETH Transakcije</h3>
-        <div class="overflow-x-auto">
+        
+        <!-- Sadržaj ETH transakcija -->
+        <div id="eth-transactions" class="overflow-x-auto">
           <table class="min-w-full">
-            <thead>
-              <tr class="table-header">
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Hash</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vrijeme</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Tip</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Adresa</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">ETH</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">USD</th>
+            <thead class="table-header">
+              <tr>
+                <th class="px-4 py-2 text-left text-white">Hash</th>
+                <th class="px-4 py-2 text-left text-white">Blok</th>
+                <th class="px-4 py-2 text-left text-white">Vrijeme</th>
+                <th class="px-4 py-2 text-left text-white">Od</th>
+                <th class="px-4 py-2 text-left text-white">Za</th>
+                <th class="px-4 py-2 text-left text-white">Vrijednost (ETH)</th>
+                <th class="px-4 py-2 text-left text-white">Status</th>
               </tr>
             </thead>
             <tbody>
-              ${transakcijeHTML}
+  `;
+  
+  // Dodaj redove za transakcije
+  if (adresa.transactions.length === 0) {
+    html += `
+      <tr class="table-row">
+        <td colspan="7" class="px-4 py-2 text-center text-gray-400">Nema transakcija za ovu adresu</td>
+      </tr>
+    `;
+  } else {
+    adresa.transactions.forEach(tx => {
+      const vrijednost = parseFloat(tx.value) / 1e18;
+      const jePrimatelj = tx.to.toLowerCase() === adresa.adresa.toLowerCase();
+      const jePoSiljatelj = tx.from.toLowerCase() === adresa.adresa.toLowerCase();
+      
+      html += `
+        <tr class="table-row">
+          <td class="px-4 py-2 text-blue-400">
+            <a href="#" onclick="pretrazi('${tx.hash}')" class="hover:text-blue-300">${skratiHash(tx.hash)}</a>
+          </td>
+          <td class="px-4 py-2 text-gray-300">
+            <a href="#" onclick="pretrazi('${tx.blockNumber}')" class="text-blue-400 hover:text-blue-300">${tx.blockNumber}</a>
+          </td>
+          <td class="px-4 py-2 text-gray-300">${formatirajVrijeme(tx.timeStamp)}</td>
+          <td class="px-4 py-2 ${jePoSiljatelj ? 'text-yellow-400 font-semibold' : 'text-gray-300'}">
+            <a href="#" onclick="pretrazi('${tx.from}')" class="hover:text-blue-300">${skratiHash(tx.from)}</a>
+          </td>
+          <td class="px-4 py-2 ${jePrimatelj ? 'text-green-400 font-semibold' : 'text-gray-300'}">
+            <a href="#" onclick="pretrazi('${tx.to}')" class="hover:text-blue-300">${skratiHash(tx.to)}</a>
+          </td>
+          <td class="px-4 py-2 ${jePrimatelj ? 'text-green-400' : 'text-red-400'}">${vrijednost.toLocaleString('hr-HR', { minimumFractionDigits: 6, maximumFractionDigits: 6 })}</td>
+          <td class="px-4 py-2 ${tx.isError === "0" ? 'text-green-400' : 'text-red-400'}">${tx.isError === "0" ? 'Uspješno' : 'Neuspješno'}</td>
+        </tr>
+      `;
+    });
+  }
+  
+  html += `
             </tbody>
           </table>
         </div>
-      </div>
-      
-      <!-- Token transakcije -->
-      <div id="token-transactions" style="display: none;">
-        <h3 class="text-lg font-semibold text-white mb-2">Token Transakcije</h3>
-        <div class="overflow-x-auto">
+        
+        <!-- Sadržaj token transakcija -->
+        <div id="token-transactions" class="overflow-x-auto" style="display: none;">
           <table class="min-w-full">
-            <thead>
-              <tr class="table-header">
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Hash</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vrijeme</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Token</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Od</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Do</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vrijednost</th>
+            <thead class="table-header">
+              <tr>
+                <th class="px-4 py-2 text-left text-white">Hash</th>
+                <th class="px-4 py-2 text-left text-white">Token</th>
+                <th class="px-4 py-2 text-left text-white">Vrijeme</th>
+                <th class="px-4 py-2 text-left text-white">Od</th>
+                <th class="px-4 py-2 text-left text-white">Za</th>
+                <th class="px-4 py-2 text-left text-white">Vrijednost</th>
               </tr>
             </thead>
-            <tbody id="token-transakcije">
-              <!-- Token transakcije će biti prikazane ovdje -->
+            <tbody>
+              <tr class="table-row">
+                <td colspan="6" class="px-4 py-2 text-center text-gray-400">Učitavanje token transakcija...</td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -779,33 +729,45 @@ async function prikaziAdresu(adresa) {
     </div>
   `;
   
-  // Dodaj event listenere za tabove
-  document.getElementById('tab-eth').addEventListener('click', function() {
-    document.getElementById('eth-transactions').style.display = 'block';
-    document.getElementById('token-transactions').style.display = 'none';
-    document.getElementById('tab-eth').classList.add('border-blue-500');
-    document.getElementById('tab-eth').classList.remove('text-gray-400');
-    document.getElementById('tab-eth').classList.add('text-white');
-    document.getElementById('tab-tokens').classList.remove('border-blue-500');
-    document.getElementById('tab-tokens').classList.add('text-gray-400');
-    document.getElementById('tab-tokens').classList.remove('text-white');
-  });
-  
-  document.getElementById('tab-tokens').addEventListener('click', function() {
-    document.getElementById('eth-transactions').style.display = 'none';
-    document.getElementById('token-transactions').style.display = 'block';
-    document.getElementById('tab-eth').classList.remove('border-blue-500');
-    document.getElementById('tab-eth').classList.add('text-gray-400');
-    document.getElementById('tab-eth').classList.remove('text-white');
-    document.getElementById('tab-tokens').classList.add('border-blue-500');
-    document.getElementById('tab-tokens').classList.remove('text-gray-400');
-    document.getElementById('tab-tokens').classList.add('text-white');
-  });
-  
+  // Prikaži rezultat
+  const rezultatDiv = document.getElementById("rezultat-pretrage");
+  rezultatDiv.innerHTML = html;
   rezultatDiv.style.display = "block";
   
-  // Prikaži token transakcije
-  prikaziTokenTransakcije();
+  // Dodaj event listenere za tabove
+  document.getElementById('eth-tab').addEventListener('click', function() {
+    document.getElementById('eth-tab').classList.add('tab-active');
+    document.getElementById('eth-tab').classList.remove('tab-inactive');
+    document.getElementById('token-tab').classList.add('tab-inactive');
+    document.getElementById('token-tab').classList.remove('tab-active');
+    document.getElementById('eth-transactions').style.display = 'block';
+    document.getElementById('token-transactions').style.display = 'none';
+  });
+  
+  document.getElementById('token-tab').addEventListener('click', function() {
+    document.getElementById('token-tab').classList.add('tab-active');
+    document.getElementById('token-tab').classList.remove('tab-inactive');
+    document.getElementById('eth-tab').classList.add('tab-inactive');
+    document.getElementById('eth-tab').classList.remove('tab-active');
+    document.getElementById('eth-transactions').style.display = 'none';
+    document.getElementById('token-transactions').style.display = 'block';
+    
+    // Dohvati token transakcije ako još nisu dohvaćene
+    if (document.querySelector('#token-transactions tbody tr td').textContent.includes('Učitavanje')) {
+      dohvatiTokenTransakcije(adresa.adresa).then(tokenTransakcije => {
+        prikaziTokenTransakcije(tokenTransakcije);
+      }).catch(error => {
+        document.querySelector('#token-transactions tbody').innerHTML = `
+          <tr class="table-row">
+            <td colspan="6" class="px-4 py-2 text-center text-red-400">Greška pri dohvaćanju token transakcija: ${error.message}</td>
+          </tr>
+        `;
+      });
+    }
+  });
+  
+  // Vizualiziraj transakcije
+  vizualizirajTransakcije(adresa.transactions);
 }
 
 // Funkcija za prikaz transakcije
@@ -819,7 +781,7 @@ async function prikaziTransakciju(transakcija) {
   
   // Pripremi HTML za prikaz transakcije
   const rezultatDiv = document.getElementById("rezultat-pretrage");
-
+  
   // Prikaži rezultat
   rezultatDiv.innerHTML = `
     <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
@@ -888,7 +850,7 @@ async function prikaziBlok(blok) {
   
   // Pripremi HTML za prikaz bloka
   const rezultatDiv = document.getElementById("rezultat-pretrage");
-
+  
   // Dohvati transakcije za ovaj blok (samo prvih 10)
   const transakcije = await Promise.all(
     blok.transactions.slice(0, 10).map(hash => dohvatiTransakciju(hash))
@@ -957,6 +919,220 @@ async function prikaziBlok(blok) {
           </table>
         </div>
       </div>
+    </div>
+  `;
+  rezultatDiv.style.display = "block";
+}
+
+// Funkcija za pripremu podataka za vizualizaciju transakcija
+function pripremiPodatkeZaVizualizaciju(transakcije) {
+  // Filtriraj samo uspješne transakcije
+  const filtrirane = transakcije.filter(tx => tx.isError === "0");
+  
+  // Sortiraj transakcije po vremenskom redoslijedu (od najstarije do najnovije)
+  const sortirane = filtrirane.sort((a, b) => parseInt(a.timeStamp) - parseInt(b.timeStamp));
+  
+  // Pripremi čvorove (adrese) i veze (transakcije)
+  const nodes = new Set();
+  const links = [];
+  
+  // Dodaj trenutnu adresu kao početni čvor
+  const trenutnaAdresa = sortirane.length > 0 ? 
+    (sortirane[0].from.toLowerCase() === sortirane[0].to.toLowerCase() ? 
+      sortirane[0].from : sortirane[0].from) : '';
+  
+  nodes.add(trenutnaAdresa);
+  
+  // Dodaj sve jedinstvene adrese kao čvorove
+  sortirane.forEach(tx => {
+    nodes.add(tx.from);
+    nodes.add(tx.to);
+    
+    links.push({
+      source: tx.from,
+      target: tx.to,
+      value: parseFloat(tx.value) / 1e18, // Vrijednost u ETH
+      hash: tx.hash,
+      timestamp: tx.timeStamp,
+      gas: tx.gas,
+      gasPrice: tx.gasPrice,
+      blockNumber: tx.blockNumber
+    });
+  });
+  
+  // Pretvori set u polje objekata
+  const nodeArray = Array.from(nodes).map(adresa => ({
+    id: adresa,
+    isCurrentAddress: adresa.toLowerCase() === trenutnaAdresa.toLowerCase()
+  }));
+  
+  return {
+    nodes: nodeArray,
+    links: links
+  };
+}
+
+// Funkcija za vizualizaciju transakcija
+function vizualizirajTransakcije(transakcije) {
+  // Pripremi podatke za vizualizaciju
+  const data = pripremiPodatkeZaVizualizaciju(transakcije);
+  
+  // Ako nema podataka, sakrij kontejner i izađi
+  if (data.nodes.length === 0 || data.links.length === 0) {
+    document.getElementById('transaction-graph-container').style.display = 'none';
+    return;
+  }
+  
+  // Prikaži kontejner
+  document.getElementById('transaction-graph-container').style.display = 'block';
+  
+  // Očisti prethodni graf
+  const container = document.getElementById('transaction-graph');
+  container.innerHTML = '';
+  
+  // Postavi dimenzije
+  const width = container.clientWidth;
+  const height = container.clientHeight;
+  
+  // Kreiraj SVG element
+  const svg = d3.select('#transaction-graph')
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height);
+  
+  // Kreiraj tooltip
+  const tooltip = d3.select('#tooltip');
+  
+  // Kreiraj simulaciju
+  const simulation = d3.forceSimulation(data.nodes)
+    .force('link', d3.forceLink(data.links).id(d => d.id).distance(100))
+    .force('charge', d3.forceManyBody().strength(-300))
+    .force('center', d3.forceCenter(width / 2, height / 2));
+  
+  // Kreiraj veze
+  const link = svg.append('g')
+    .selectAll('line')
+    .data(data.links)
+    .enter()
+    .append('line')
+    .attr('class', 'link')
+    .attr('stroke-width', d => Math.max(1, Math.min(5, Math.sqrt(d.value) * 2)))
+    .on('mouseover', function(event, d) {
+      // Prikaži tooltip
+      tooltip.style('opacity', 1)
+        .html(`
+          <div class="font-semibold text-white">Transakcija</div>
+          <div class="text-gray-300">Hash: ${skratiHash(d.hash)}</div>
+          <div class="text-gray-300">Vrijednost: ${(d.value).toFixed(4)} ETH</div>
+          <div class="text-gray-300">Vrijeme: ${formatirajVrijeme(d.timestamp)}</div>
+          <div class="text-gray-300">Blok: ${d.blockNumber}</div>
+        `)
+        .style('left', (event.pageX + 10) + 'px')
+        .style('top', (event.pageY - 28) + 'px');
+    })
+    .on('mouseout', function() {
+      // Sakrij tooltip
+      tooltip.style('opacity', 0);
+    });
+  
+  // Kreiraj čvorove
+  const node = svg.append('g')
+    .selectAll('circle')
+    .data(data.nodes)
+    .enter()
+    .append('circle')
+    .attr('class', 'node')
+    .attr('r', d => d.isCurrentAddress ? 10 : 5)
+    .attr('fill', d => d.isCurrentAddress ? '#3b82f6' : '#6b7280')
+    .on('mouseover', function(event, d) {
+      // Prikaži tooltip
+      tooltip.style('opacity', 1)
+        .html(`
+          <div class="font-semibold text-white">Adresa</div>
+          <div class="text-gray-300">${skratiHash(d.id)}</div>
+          ${d.isCurrentAddress ? '<div class="text-blue-300">Trenutna adresa</div>' : ''}
+        `)
+        .style('left', (event.pageX + 10) + 'px')
+        .style('top', (event.pageY - 28) + 'px');
+    })
+    .on('mouseout', function() {
+      // Sakrij tooltip
+      tooltip.style('opacity', 0);
+    })
+    .call(d3.drag()
+      .on('start', dragstarted)
+      .on('drag', dragged)
+      .on('end', dragended));
+  
+  // Dodaj oznake za čvorove
+  const labels = svg.append('g')
+    .selectAll('text')
+    .data(data.nodes)
+    .enter()
+    .append('text')
+    .text(d => skratiHash(d.id))
+    .attr('font-size', '10px')
+    .attr('dx', 12)
+    .attr('dy', 4)
+    .attr('fill', '#fff');
+  
+  // Funkcije za povlačenje čvorova
+  function dragstarted(event) {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    event.subject.fx = event.subject.x;
+    event.subject.fy = event.subject.y;
+  }
+  
+  function dragged(event) {
+    event.subject.fx = event.x;
+    event.subject.fy = event.y;
+  }
+  
+  function dragended(event) {
+    if (!event.active) simulation.alphaTarget(0);
+    event.subject.fx = null;
+    event.subject.fy = null;
+  }
+  
+  // Ažuriraj pozicije elemenata tijekom simulacije
+  simulation.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    
+    node
+      .attr('cx', d => d.x)
+      .attr('cy', d => d.y);
+    
+    labels
+      .attr('x', d => d.x)
+      .attr('y', d => d.y);
+  });
+}
+
+// Funkcija za prikaz indikatora učitavanja
+function prikaziUcitavanje() {
+  const rezultatDiv = document.getElementById("rezultat-pretrage");
+  rezultatDiv.innerHTML = `
+    <div class="flex justify-center items-center p-10">
+      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <p class="ml-4 text-white">Učitavanje podataka...</p>
+    </div>
+  `;
+  rezultatDiv.style.display = "block";
+}
+
+// Funkcija za prikaz greške
+function prikaziGresku(poruka) {
+  console.error("Greška:", poruka);
+  
+  const rezultatDiv = document.getElementById("rezultat-pretrage");
+  rezultatDiv.innerHTML = `
+    <div class="bg-red-800 text-white p-4 rounded-lg shadow-lg mt-4">
+      <p class="font-semibold">Greška</p>
+      <p>${poruka}</p>
     </div>
   `;
   rezultatDiv.style.display = "block";
