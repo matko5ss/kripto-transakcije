@@ -373,16 +373,9 @@ function prikaziBlok(blok) {
 
 // Inicijalizacija nakon učitavanja stranice
 document.addEventListener('DOMContentLoaded', function() {
-  // Dodaj event listener za pretraživanje
-  const searchForm = document.querySelector('.search-input').parentElement;
+  // Dohvati elemente za pretraživanje
   const searchInput = document.querySelector('.search-input');
   const searchButton = document.querySelector('.search-button');
-  
-  // Dodaj div za prikaz rezultata pretrage
-  const rezultatDiv = document.createElement('div');
-  rezultatDiv.id = 'rezultat-pretrage';
-  rezultatDiv.style.display = 'none';
-  searchForm.parentElement.appendChild(rezultatDiv);
   
   // Event listener za klik na gumb za pretraživanje
   searchButton.addEventListener('click', function() {
