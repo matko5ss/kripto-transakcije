@@ -10,6 +10,18 @@ interface TransakcijaDetaljiProps {
   };
 }
 
+// Ova funkcija govori Next.js koje statičke putanje treba generirati za ovu dinamičku rutu
+export async function generateStaticParams() {
+  // Generiramo nekoliko primjera transakcija za statički export
+  return [
+    { hash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1111' },
+    { hash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2222' },
+    { hash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3333' },
+    { hash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4444' },
+    { hash: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa5555' }
+  ];
+}
+
 export default async function TransakcijaDetalji({ params }: TransakcijaDetaljiProps) {
   const { hash } = params;
   const transakcija = await dohvatiTransakciju(hash);

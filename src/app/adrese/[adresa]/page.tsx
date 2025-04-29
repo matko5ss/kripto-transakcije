@@ -9,6 +9,18 @@ interface AdresaDetaljiProps {
   };
 }
 
+// Ova funkcija govori Next.js koje statičke putanje treba generirati za ovu dinamičku rutu
+export async function generateStaticParams() {
+  // Generiramo nekoliko primjera adresa za statički export
+  return [
+    { adresa: '0x8ba1f109551bD432803012645Ac136ddd64DBA72' },
+    { adresa: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' },
+    { adresa: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2' }, // WETH adresa
+    { adresa: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' }, // USDC adresa
+    { adresa: '0xdAC17F958D2ee523a2206206994597C13D831ec7' }  // USDT adresa
+  ];
+}
+
 export default async function AdresaDetalji({ params }: AdresaDetaljiProps) {
   const { adresa } = params;
   const adresaPodaci = await dohvatiAdresu(adresa);

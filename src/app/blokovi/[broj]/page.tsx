@@ -11,6 +11,18 @@ interface BlokDetaljiProps {
   };
 }
 
+// Ova funkcija govori Next.js koje statičke putanje treba generirati za ovu dinamičku rutu
+export async function generateStaticParams() {
+  // Generiramo nekoliko primjera blokova za statički export
+  return [
+    { broj: '12345678' },
+    { broj: '12345677' },
+    { broj: '12345676' },
+    { broj: '12345675' },
+    { broj: '12345674' }
+  ];
+}
+
 export default async function BlokDetalji({ params }: BlokDetaljiProps) {
   const { broj } = params;
   const blok = await dohvatiBlok(broj);
