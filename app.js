@@ -681,17 +681,17 @@ async function prikaziAdresu(adresa) {
       html += `
         <tr class="table-row">
           <td class="px-4 py-2 text-blue-400">
-            <a href="#" onclick="pretrazi('${tx.hash}')" class="hover:text-blue-300">${skratiHash(tx.hash)}</a>
+            <a href="#" class="text-blue-400 hover:text-blue-300" onclick="pretrazi('${tx.hash}')" >${skratiHash(tx.hash)}</a>
           </td>
           <td class="px-4 py-2 text-gray-300">
-            <a href="#" onclick="pretrazi('${tx.blockNumber}')" class="text-blue-400 hover:text-blue-300">${tx.blockNumber}</a>
+            <a href="#" class="text-blue-400 hover:text-blue-300" onclick="pretrazi('${tx.blockNumber}')" >${tx.blockNumber}</a>
           </td>
           <td class="px-4 py-2 text-gray-300">${formatirajVrijeme(tx.timeStamp)}</td>
           <td class="px-4 py-2 ${jePoSiljatelj ? 'text-yellow-400 font-semibold' : 'text-gray-300'}">
-            <a href="#" onclick="pretrazi('${tx.from}')" class="hover:text-blue-300">${skratiHash(tx.from)}</a>
+            <a href="#" class="hover:text-blue-300" onclick="pretrazi('${tx.from}')">${skratiHash(tx.from)}</a>
           </td>
           <td class="px-4 py-2 ${jePrimatelj ? 'text-green-400 font-semibold' : 'text-gray-300'}">
-            <a href="#" onclick="pretrazi('${tx.to}')" class="hover:text-blue-300">${skratiHash(tx.to)}</a>
+            <a href="#" class="hover:text-blue-300" onclick="pretrazi('${tx.to}')">${skratiHash(tx.to)}</a>
           </td>
           <td class="px-4 py-2 ${jePrimatelj ? 'text-green-400' : 'text-red-400'}">${vrijednost.toLocaleString('hr-HR', { minimumFractionDigits: 6, maximumFractionDigits: 6 })}</td>
           <td class="px-4 py-2 ${tx.isError === "0" ? 'text-green-400' : 'text-red-400'}">${tx.isError === "0" ? 'Uspješno' : 'Neuspješno'}</td>
@@ -782,6 +782,17 @@ async function prikaziTransakciju(transakcija) {
   // Pripremi HTML za prikaz transakcije
   const rezultatDiv = document.getElementById("rezultat-pretrage");
   
+  // Dohvati dodatne informacije o bloku za timestamp
+  const blockResponse = await fetch(`${ETHERSCAN_PROXY_URL}?action=block&blockno=${parseInt(transakcija.blockNumber, 16)}`);
+  const blockData = await blockResponse.json();
+  const timestamp = blockData.result && blockData.result.timestamp ? 
+    new Date(parseInt(blockData.result.timestamp, 16) * 1000).toISOString() : 
+    null;
+  
+  // Izračunaj vrijednost u USD
+  const valueEth = parseInt(transakcija.value, 16) / 1e18;
+  const valueUsd = valueEth * ethPrice.usd;
+  
   // Prikaži rezultat
   rezultatDiv.innerHTML = `
     <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
@@ -802,12 +813,12 @@ async function prikaziTransakciju(transakcija) {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <p class="text-gray-400">Vrijeme:</p>
-          <p class="text-white">${formatirajVrijeme(transakcija.blockTimestamp)}</p>
+          <p class="text-white">${formatirajVrijeme(timestamp)}</p>
         </div>
         
         <div>
           <p class="text-gray-400">Vrijednost:</p>
-          <p class="text-white">${transakcija.value} ETH ($${transakcija.valueUsd})</p>
+          <p class="text-white">${valueEth.toFixed(6)} ETH ($${valueUsd.toFixed(2)})</p>
         </div>
       </div>
       
@@ -924,6 +935,85 @@ async function prikaziBlok(blok) {
   rezultatDiv.style.display = "block";
 }
 
+// Funkcija za formatiranje vremena
+function formatirajVrijeme(timestamp) {
+  if (!timestamp) return "N/A";
+  
+  const datum = new Date(timestamp);
+  return datum.toLocaleDateString("hr-HR") + " " + datum.toLocaleTimeString("hr-HR");
+}
+
+// Funkcija za skraćivanje hash vrijednosti
+function skratiHash(hash) {
+  if (!hash) return "N/A";
+  return hash.substring(0, 6) + "..." + hash.substring(hash.length - 4);
+}
+
+// Funkcija za pretraživanje
+async function pretrazi(upit) {
+  try {
+    console.log("Pretražujem:", upit);
+    
+    // Prikaži indikator učitavanja
+    prikaziUcitavanje();
+    
+    // Provjeri je li upit prazan
+    if (!upit || upit.trim() === "") {
+      prikaziGresku("Unesite adresu, hash transakcije ili broj bloka za pretraživanje");
+      return;
+    }
+    
+    // Očisti upit
+    upit = upit.trim();
+    
+    // Provjeri je li upit broj bloka
+    if (/^\d+$/.test(upit)) {
+      console.log("Upit je broj bloka");
+      const blok = await dohvatiBlok(upit);
+      if (blok) {
+        prikaziBlok(blok);
+      } else {
+        prikaziGresku(`Blok broj ${upit} nije pronađen`);
+      }
+      return;
+    }
+    
+    // Provjeri je li upit hash transakcije (0x + 64 heksadecimalna znaka)
+    if (/^0x[a-fA-F0-9]{64}$/.test(upit)) {
+      console.log("Upit je hash transakcije");
+      const transakcija = await dohvatiTransakciju(upit);
+      if (transakcija) {
+        prikaziTransakciju(transakcija);
+      } else {
+        prikaziGresku(`Transakcija ${upit} nije pronađena`);
+      }
+      return;
+    }
+    
+    // Provjeri je li upit Ethereum adresa (0x + 40 heksadecimalnih znakova)
+    if (/^0x[a-fA-F0-9]{40}$/.test(upit)) {
+      console.log("Upit je Ethereum adresa");
+      try {
+        const adresa = await dohvatiAdresu(upit);
+        if (adresa) {
+          prikaziAdresu(adresa);
+        } else {
+          prikaziGresku(`Adresa ${upit} nije pronađena`);
+        }
+      } catch (error) {
+        prikaziGresku(`Greška pri dohvaćanju adrese: ${error.message}`);
+      }
+      return;
+    }
+    
+    // Ako upit ne odgovara nijednom formatu, prikaži grešku
+    prikaziGresku(`Neispravan format upita: ${upit}. Unesite valjanu Ethereum adresu, hash transakcije ili broj bloka.`);
+  } catch (error) {
+    console.error("Greška pri pretraživanju:", error);
+    prikaziGresku(`Greška pri pretraživanju: ${error.message}`);
+  }
+}
+
 // Funkcija za pripremu podataka za vizualizaciju transakcija
 function pripremiPodatkeZaVizualizaciju(transakcije) {
   // Filtriraj samo uspješne transakcije
@@ -1000,13 +1090,46 @@ function vizualizirajTransakcije(transakcije) {
     .attr('width', width)
     .attr('height', height);
   
+  // Dodaj definicije za strelice
+  const defs = svg.append('defs');
+  
+  // Zelena strelica za dolazne transakcije
+  defs.append('marker')
+    .attr('id', 'arrowhead-green')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20)
+    .attr('refY', 0)
+    .attr('orient', 'auto')
+    .attr('markerWidth', 5)
+    .attr('markerHeight', 5)
+    .attr('xoverflow', 'visible')
+    .append('svg:path')
+    .attr('d', 'M 0,-5 L 10,0 L 0,5')
+    .attr('fill', '#10b981')
+    .style('stroke', 'none');
+  
+  // Crvena strelica za odlazne transakcije
+  defs.append('marker')
+    .attr('id', 'arrowhead-red')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 20)
+    .attr('refY', 0)
+    .attr('orient', 'auto')
+    .attr('markerWidth', 5)
+    .attr('markerHeight', 5)
+    .attr('xoverflow', 'visible')
+    .append('svg:path')
+    .attr('d', 'M 0,-5 L 10,0 L 0,5')
+    .attr('fill', '#ef4444')
+    .style('stroke', 'none');
+  
   // Kreiraj tooltip
   const tooltip = d3.select('#tooltip');
   
   // Kreiraj simulaciju
   const simulation = d3.forceSimulation(data.nodes)
-    .force('link', d3.forceLink(data.links).id(d => d.id).distance(100))
-    .force('charge', d3.forceManyBody().strength(-300))
+    .force('link', d3.forceLink(data.links).id(d => d.id).distance(250))
+    .force('charge', d3.forceManyBody().strength(-800))
     .force('center', d3.forceCenter(width / 2, height / 2));
   
   // Kreiraj veze
@@ -1015,17 +1138,54 @@ function vizualizirajTransakcije(transakcije) {
     .data(data.links)
     .enter()
     .append('line')
-    .attr('class', 'link')
+    .attr('class', d => {
+      // Odredi je li transakcija dolazna ili odlazna u odnosu na trenutnu adresu
+      const trenutnaAdresa = data.nodes.find(n => n.isCurrentAddress).id.toLowerCase();
+      return d.source.id.toLowerCase() === trenutnaAdresa ? 'link-outgoing' : 'link-incoming';
+    })
     .attr('stroke-width', d => Math.max(1, Math.min(5, Math.sqrt(d.value) * 2)))
+    .attr('marker-end', d => {
+      // Odredi je li transakcija dolazna ili odlazna u odnosu na trenutnu adresu
+      const trenutnaAdresa = data.nodes.find(n => n.isCurrentAddress).id.toLowerCase();
+      return d.source.id.toLowerCase() === trenutnaAdresa ? 'url(#arrowhead-red)' : 'url(#arrowhead-green)';
+    })
     .on('mouseover', function(event, d) {
-      // Prikaži tooltip
+      // Prikaži tooltip s detaljima transakcije
       tooltip.style('opacity', 1)
         .html(`
-          <div class="font-semibold text-white">Transakcija</div>
-          <div class="text-gray-300">Hash: ${skratiHash(d.hash)}</div>
-          <div class="text-gray-300">Vrijednost: ${(d.value).toFixed(4)} ETH</div>
-          <div class="text-gray-300">Vrijeme: ${formatirajVrijeme(d.timestamp)}</div>
-          <div class="text-gray-300">Blok: ${d.blockNumber}</div>
+          <div class="tooltip-title">Detalji transakcije</div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Hash:</span>
+            <span class="tooltip-value">${skratiHash(d.hash)}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Od:</span>
+            <span class="tooltip-value">${skratiHash(d.source.id)}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Za:</span>
+            <span class="tooltip-value">${skratiHash(d.target.id)}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Vrijednost:</span>
+            <span class="tooltip-value">${d.value.toFixed(6)} ETH</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Vrijeme:</span>
+            <span class="tooltip-value">${formatirajVrijeme(d.timestamp)}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Blok:</span>
+            <span class="tooltip-value">${d.blockNumber}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Gas potrošen:</span>
+            <span class="tooltip-value">${d.gas} jedinica</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Gas cijena:</span>
+            <span class="tooltip-value">${(d.gasPrice / 1e9).toFixed(2)} Gwei</span>
+          </div>
         `)
         .style('left', (event.pageX + 10) + 'px')
         .style('top', (event.pageY - 28) + 'px');
@@ -1042,15 +1202,47 @@ function vizualizirajTransakcije(transakcije) {
     .enter()
     .append('circle')
     .attr('class', 'node')
-    .attr('r', d => d.isCurrentAddress ? 10 : 5)
+    .attr('r', d => d.isCurrentAddress ? 15 : 8)
     .attr('fill', d => d.isCurrentAddress ? '#3b82f6' : '#6b7280')
     .on('mouseover', function(event, d) {
-      // Prikaži tooltip
+      // Dohvati sve transakcije povezane s ovom adresom
+      const povezaneTransakcije = data.links.filter(link => 
+        link.source.id === d.id || link.target.id === d.id
+      );
+      
+      // Izračunaj ukupno poslano i primljeno
+      let ukupnoPoslano = 0;
+      let ukupnoPrimljeno = 0;
+      let ukupnoTransakcija = povezaneTransakcije.length;
+      
+      povezaneTransakcije.forEach(tx => {
+        if (tx.source.id === d.id) {
+          ukupnoPoslano += tx.value;
+        } else {
+          ukupnoPrimljeno += tx.value;
+        }
+      });
+      
+      // Prikaži tooltip s detaljima adrese
       tooltip.style('opacity', 1)
         .html(`
-          <div class="font-semibold text-white">Adresa</div>
-          <div class="text-gray-300">${skratiHash(d.id)}</div>
-          ${d.isCurrentAddress ? '<div class="text-blue-300">Trenutna adresa</div>' : ''}
+          <div class="tooltip-title">${d.isCurrentAddress ? 'Trenutna adresa' : 'Povezana adresa'}</div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Adresa:</span>
+            <span class="tooltip-value">${d.id}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Ukupno transakcija:</span>
+            <span class="tooltip-value">${ukupnoTransakcija}</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Ukupno poslano:</span>
+            <span class="tooltip-value">${ukupnoPoslano.toFixed(6)} ETH</span>
+          </div>
+          <div class="tooltip-row">
+            <span class="tooltip-label">Ukupno primljeno:</span>
+            <span class="tooltip-value">${ukupnoPrimljeno.toFixed(6)} ETH</span>
+          </div>
         `)
         .style('left', (event.pageX + 10) + 'px')
         .style('top', (event.pageY - 28) + 'px');
@@ -1071,7 +1263,7 @@ function vizualizirajTransakcije(transakcije) {
     .enter()
     .append('text')
     .text(d => skratiHash(d.id))
-    .attr('font-size', '10px')
+    .attr('font-size', '11px')
     .attr('dx', 12)
     .attr('dy', 4)
     .attr('fill', '#fff');
