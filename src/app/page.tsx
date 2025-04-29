@@ -2,13 +2,22 @@ import Pretrazivac from '@/components/Pretrazivac';
 import PodaciKartica from '@/components/PodaciKartica';
 import TransakcijeTabela from '@/components/TransakcijeTabela';
 import CijenaGrafikon from '@/components/CijenaGrafikon';
-import { dohvatiTransakcije, dohvatiCijenuEthera } from '@/services/moralis';
+import { 
+  dohvatiTransakcije, 
+  dohvatiCijenuEthera, 
+  dohvatiZadnjiBlok, 
+  dohvatiTransakcijeDanas, 
+  dohvatiGasCijenu 
+} from '@/services/moralis';
 import { FaExchangeAlt, FaCubes, FaEthereum, FaNetworkWired } from 'react-icons/fa';
 
 export default async function Home() {
   // Dohvaćamo podatke za početnu stranicu
   const transakcije = await dohvatiTransakcije(undefined, 10);
   const cijenaEthera = await dohvatiCijenuEthera();
+  const zadnjiBlok = await dohvatiZadnjiBlok();
+  const transakcijeCount = await dohvatiTransakcijeDanas();
+  const gasCijena = await dohvatiGasCijenu();
 
   return (
     <div className="space-y-8">
@@ -27,19 +36,19 @@ export default async function Home() {
         />
         <PodaciKartica 
           naslov="Zadnji blok" 
-          vrijednost="Učitavanje..." 
+          vrijednost={zadnjiBlok} 
           ikona={<FaCubes />} 
           boja="green"
         />
         <PodaciKartica 
           naslov="Transakcije danas" 
-          vrijednost="Učitavanje..." 
+          vrijednost={transakcijeCount} 
           ikona={<FaExchangeAlt />} 
           boja="purple"
         />
         <PodaciKartica 
           naslov="Gas cijena" 
-          vrijednost="Učitavanje..." 
+          vrijednost={gasCijena} 
           ikona={<FaNetworkWired />} 
           boja="yellow"
         />
