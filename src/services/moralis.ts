@@ -560,3 +560,32 @@ export async function dohvatiGasCijenu(): Promise<string> {
     return '25.45 Gwei';
   }
 }
+
+// Funkcija koja provjerava je li kod izvršen na klijentu
+export function isClient(): boolean {
+  return typeof window !== 'undefined';
+}
+
+// Funkcija koja simulira dohvaćanje podataka za statički export
+export async function dohvatiStatickePodatke() {
+  return {
+    zadnjiBlok: '18456789',
+    transakcijeCount: '950.000',
+    gasCijena: '25.45 Gwei',
+    cijenaEthera: 3520,
+    transakcije: Array.from({ length: 10 }, (_, i) => ({
+      hash: `0x${(i + 1).toString().padStart(64, 'a')}`,
+      blockNumber: (12345678 - i).toString(),
+      blockTimestamp: mockDatumi[i % mockDatumi.length],
+      from: '0x8ba1f109551bD432803012645Ac136ddd64DBA72',
+      to: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F',
+      value: ((i + 1) * 0.1).toString(),
+      gas: '21000',
+      gasPrice: '25000000000'
+    })),
+    povijestCijena: {
+      cijene: mockCijene.slice(0, 7),
+      datumi: mockDatumi.slice(0, 7)
+    }
+  };
+}

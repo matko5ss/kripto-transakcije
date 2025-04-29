@@ -12,7 +12,7 @@ import {
   Legend,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { dohvatiPovijestCijenaEthera } from '../services/moralis';
+import { dohvatiPovijestCijenaEthera, dohvatiStatickePodatke, isClient } from '../services/moralis';
 
 // Registriramo potrebne komponente za Chart.js
 ChartJS.register(
@@ -41,12 +41,26 @@ export default function CijenaGrafikon({ dani = 7 }: CijenaGrafikonProps) {
     const dohvatiPodatke = async () => {
       try {
         setUcitavanje(true);
+        
+        // Za statički export koristimo preddefinirane podatke
+        if (!isClient()) {
+          const staticData = await dohvatiStatickePodatke();
+          setPodaci(staticData.povijestCijena);
+          setGreska(null);
+          setUcitavanje(false);
+          return;
+        }
+        
         const povijestCijena = await dohvatiPovijestCijenaEthera(dani);
         setPodaci(povijestCijena);
         setGreska(null);
       } catch (error) {
         console.error('Greška pri dohvaćanju povijesti cijena:', error);
         setGreska('Nije moguće dohvatiti podatke o cijenama');
+        
+        // U slučaju greške, koristimo preddefinirane podatke
+        const staticData = await dohvatiStatickePodatke();
+        setPodaci(staticData.povijestCijena);
       } finally {
         setUcitavanje(false);
       }

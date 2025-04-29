@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { dohvatiAdresu, dohvatiTransakcije, dohvatiTokene, dohvatiCijenuEthera } from '@/services/moralis';
 import { FaWallet, FaExchangeAlt, FaCoins } from 'react-icons/fa';
 import TransakcijeTabela from '@/components/TransakcijeTabela';
-import PodaciKartica from '@/components/PodaciKartica';
 
 interface AdresaDetaljiProps {
   params: {

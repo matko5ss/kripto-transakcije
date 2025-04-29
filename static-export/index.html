@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kripto Transakcije - Hrvatski Blockchain Explorer</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --background: #0a0a0a;
+      --foreground: #6a7282;
+    }
+    body {
+      background-color: var(--background);
+      color: var(--foreground);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    .card {
+      transition: transform 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+    }
+    .blue-card {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    }
+    .green-card {
+      background: linear-gradient(135deg, #065f46 0%, #10b981 100%);
+    }
+    .purple-card {
+      background: linear-gradient(135deg, #5b21b6 0%, #8b5cf6 100%);
+    }
+    .yellow-card {
+      background: linear-gradient(135deg, #92400e 0%, #f59e0b 100%);
+    }
+    .search-input {
+      background-color: #1f2937;
+      border: 1px solid #374151;
+      color: white;
+    }
+    .search-input::placeholder {
+      color: #6b7280;
+    }
+    .search-button {
+      background-color: #3b82f6;
+    }
+    .search-button:hover {
+      background-color: #2563eb;
+    }
+    .table-header {
+      background-color: #1f2937;
+    }
+    .table-row {
+      border-bottom: 1px solid #374151;
+    }
+    .table-row:hover {
+      background-color: #1f2937;
+    }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-center text-white mb-8">
+      Dobrodošli na Kripto Transakcije - Hrvatski Blockchain Explorer
+    </h1>
+    
+    <!-- Pretraživač -->
+    <div class="max-w-2xl mx-auto mb-8">
+      <div class="flex rounded-lg overflow-hidden shadow-lg">
+        <input type="text" placeholder="Pretraži po adresi, transakciji ili bloku..." class="search-input flex-grow px-4 py-3 focus:outline-none">
+        <button class="search-button px-6 py-3 text-white font-medium">Pretraži</button>
+      </div>
+    </div>
+    
+    <!-- Podatkovne kartice -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="card blue-card rounded-lg shadow-lg p-4 text-white">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-lg font-medium">Cijena Ethereuma</h3>
+          <i class="fas fa-ethereum text-2xl"></i>
+        </div>
+        <p class="text-2xl font-bold">$3,520.00</p>
+      </div>
+      
+      <div class="card green-card rounded-lg shadow-lg p-4 text-white">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-lg font-medium">Zadnji blok</h3>
+          <i class="fas fa-cubes text-2xl"></i>
+        </div>
+        <p class="text-2xl font-bold">18,456,789</p>
+      </div>
+      
+      <div class="card purple-card rounded-lg shadow-lg p-4 text-white">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-lg font-medium">Transakcije danas</h3>
+          <i class="fas fa-exchange-alt text-2xl"></i>
+        </div>
+        <p class="text-2xl font-bold">950.000</p>
+      </div>
+      
+      <div class="card yellow-card rounded-lg shadow-lg p-4 text-white">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-lg font-medium">Gas cijena</h3>
+          <i class="fas fa-network-wired text-2xl"></i>
+        </div>
+        <p class="text-2xl font-bold">25.45 Gwei</p>
+      </div>
+    </div>
+    
+    <!-- Glavni sadržaj -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Tablica transakcija -->
+      <div class="bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        <div class="p-4 border-b border-gray-700 flex justify-between items-center">
+          <h2 class="text-lg font-semibold text-white">Zadnje transakcije</h2>
+          <div class="text-sm text-gray-400">
+            Ukupno: 10 transakcija
+          </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="min-w-full">
+            <thead>
+              <tr class="table-header">
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Hash</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Blok</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vrijeme</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Od</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Do</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vrijednost</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-700">
+              <tr class="table-row">
+                <td class="px-4 py-3 text-sm text-blue-400">0xaaa...1111</td>
+                <td class="px-4 py-3 text-sm text-gray-300">12345678</td>
+                <td class="px-4 py-3 text-sm text-gray-400">prije 5 minuta</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x8ba1...BA72</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x71C7...976F</td>
+                <td class="px-4 py-3 text-sm text-green-400">0.100000 ETH</td>
+              </tr>
+              <tr class="table-row">
+                <td class="px-4 py-3 text-sm text-blue-400">0xaaa...2222</td>
+                <td class="px-4 py-3 text-sm text-gray-300">12345677</td>
+                <td class="px-4 py-3 text-sm text-gray-400">prije 10 minuta</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x8ba1...BA72</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x71C7...976F</td>
+                <td class="px-4 py-3 text-sm text-green-400">0.200000 ETH</td>
+              </tr>
+              <tr class="table-row">
+                <td class="px-4 py-3 text-sm text-blue-400">0xaaa...3333</td>
+                <td class="px-4 py-3 text-sm text-gray-300">12345676</td>
+                <td class="px-4 py-3 text-sm text-gray-400">prije 15 minuta</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x8ba1...BA72</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x71C7...976F</td>
+                <td class="px-4 py-3 text-sm text-green-400">0.300000 ETH</td>
+              </tr>
+              <tr class="table-row">
+                <td class="px-4 py-3 text-sm text-blue-400">0xaaa...4444</td>
+                <td class="px-4 py-3 text-sm text-gray-300">12345675</td>
+                <td class="px-4 py-3 text-sm text-gray-400">prije 20 minuta</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x8ba1...BA72</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x71C7...976F</td>
+                <td class="px-4 py-3 text-sm text-green-400">0.400000 ETH</td>
+              </tr>
+              <tr class="table-row">
+                <td class="px-4 py-3 text-sm text-blue-400">0xaaa...5555</td>
+                <td class="px-4 py-3 text-sm text-gray-300">12345674</td>
+                <td class="px-4 py-3 text-sm text-gray-400">prije 25 minuta</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x8ba1...BA72</td>
+                <td class="px-4 py-3 text-sm text-gray-300">0x71C7...976F</td>
+                <td class="px-4 py-3 text-sm text-green-400">0.500000 ETH</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- Grafikon cijena -->
+      <div class="bg-gray-800 rounded-lg shadow-lg p-4">
+        <h2 class="text-lg font-semibold text-white mb-4">Cijena Ethereuma (zadnjih 7 dana)</h2>
+        <canvas id="cijenaGrafikon" height="300"></canvas>
+      </div>
+    </div>
+    
+    <!-- Podnožje -->
+    <footer class="mt-12 text-center text-gray-500 text-sm">
+      <p>© 2025 Kripto Transakcije - Hrvatski Blockchain Explorer</p>
+      <p class="mt-2">Podaci o blockchainu su preuzeti s Ethereum mreže</p>
+    </footer>
+  </div>
+  
+  <script>
+    // Inicijalizacija grafikona
+    document.addEventListener('DOMContentLoaded', function() {
+      const ctx = document.getElementById('cijenaGrafikon').getContext('2d');
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['29.04.', '28.04.', '27.04.', '26.04.', '25.04.', '24.04.', '23.04.'],
+          datasets: [{
+            label: 'Cijena (USD)',
+            data: [3520, 3480, 3510, 3490, 3530, 3550, 3540],
+            fill: false,
+            borderColor: '#3b82f6',
+            tension: 0.1,
+            pointBackgroundColor: '#3b82f6',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: '#3b82f6'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                color: '#9ca3af'
+              }
+            },
+            x: {
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                color: '#9ca3af'
+              }
+            }
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

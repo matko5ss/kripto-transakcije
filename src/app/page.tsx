@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Pretrazivac from '@/components/Pretrazivac';
 import PodaciKartica from '@/components/PodaciKartica';
 import TransakcijeTabela from '@/components/TransakcijeTabela';
@@ -7,17 +10,66 @@ import {
   dohvatiCijenuEthera, 
   dohvatiZadnjiBlok, 
   dohvatiTransakcijeDanas, 
-  dohvatiGasCijenu 
+  dohvatiGasCijenu,
+  dohvatiStatickePodatke,
+  isClient
 } from '@/services/moralis';
 import { FaExchangeAlt, FaCubes, FaEthereum, FaNetworkWired } from 'react-icons/fa';
+import { Transakcija } from '@/services/moralis';
 
-export default async function Home() {
-  // Dohvaćamo podatke za početnu stranicu
-  const transakcije = await dohvatiTransakcije(undefined, 10);
-  const cijenaEthera = await dohvatiCijenuEthera();
-  const zadnjiBlok = await dohvatiZadnjiBlok();
-  const transakcijeCount = await dohvatiTransakcijeDanas();
-  const gasCijena = await dohvatiGasCijenu();
+export default function Home() {
+  const [transakcije, setTransakcije] = useState<Transakcija[]>([]);
+  const [cijenaEthera, setCijenaEthera] = useState<number>(0);
+  const [zadnjiBlok, setZadnjiBlok] = useState<string>('Učitavanje...');
+  const [transakcijeCount, setTransakcijeCount] = useState<string>('Učitavanje...');
+  const [gasCijena, setGasCijena] = useState<string>('Učitavanje...');
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Za statički export koristimo preddefinirane podatke
+        if (!isClient()) {
+          const staticData = await dohvatiStatickePodatke();
+          setTransakcije(staticData.transakcije);
+          setCijenaEthera(staticData.cijenaEthera);
+          setZadnjiBlok(staticData.zadnjiBlok);
+          setTransakcijeCount(staticData.transakcijeCount);
+          setGasCijena(staticData.gasCijena);
+          setLoading(false);
+          return;
+        }
+
+        // Dohvaćamo podatke za početnu stranicu
+        const [transData, cijenaData, blokData, transCountData, gasData] = await Promise.all([
+          dohvatiTransakcije(undefined, 10),
+          dohvatiCijenuEthera(),
+          dohvatiZadnjiBlok(),
+          dohvatiTransakcijeDanas(),
+          dohvatiGasCijenu()
+        ]);
+
+        setTransakcije(transData);
+        setCijenaEthera(cijenaData);
+        setZadnjiBlok(blokData);
+        setTransakcijeCount(transCountData);
+        setGasCijena(gasData);
+        setLoading(false);
+      } catch (error) {
+        console.error('Greška pri dohvaćanju podataka:', error);
+        // U slučaju greške, koristimo preddefinirane podatke
+        const staticData = await dohvatiStatickePodatke();
+        setTransakcije(staticData.transakcije);
+        setCijenaEthera(staticData.cijenaEthera);
+        setZadnjiBlok(staticData.zadnjiBlok);
+        setTransakcijeCount(staticData.transakcijeCount);
+        setGasCijena(staticData.gasCijena);
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -30,7 +82,7 @@ export default async function Home() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <PodaciKartica 
           naslov="Cijena Ethereuma" 
-          vrijednost={`$${cijenaEthera.toLocaleString('hr-HR')}`} 
+          vrijednost={loading ? 'Učitavanje...' : `$${cijenaEthera.toLocaleString('hr-HR')}`} 
           ikona={<FaEthereum />} 
           boja="blue"
         />
