@@ -81,7 +81,7 @@ export default function Home() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-center mb-8">
-        Doobrodošli na Kripto Transakcije - Hrvatski Blockchain Explorer
+        Dobrodošli na Kripto Transakcije - Hrvatski Blockchain Explorer
       </h1>
 
       <Pretrazivac />
