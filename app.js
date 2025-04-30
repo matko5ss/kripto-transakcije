@@ -1,49 +1,32 @@
 // app.js - Glavna JavaScript datoteka za Kripto Transakcije aplikaciju
 
 // Konfiguracija za API pozive
-const ETHERSCAN_PROXY_URL = 'etherscan_proxy.php'; // PHP proxy za Etherscan API
+const ETHERSCAN_PROXY_URL = "etherscan_proxy.php"; // PHP proxy za Etherscan API
 
 // Globalne varijable
-let ethPrice = { usd: 0, btc: 0 };
-let zadnjiBlokovi = [];
-let gasInfo = {};
-let networkStats = {};
+let ethPrice = { usd: 0, eur: 0, change24h: 0 };
+let gasInfo = { low: 0, average: 0, high: 0 };
+let networkStats = { difficulty: 0, hashRate: 0 };
 let tokenTransakcije = [];
 
 // Funkcija za dohvaćanje cijene Ethereuma
-async function dohvatiCijenuEthereuma() {
+async function dohvatiEthereumCijenu() {
   try {
-    console.log('Dohvaćam cijenu Ethereuma...');
     const response = await fetch(`${ETHERSCAN_PROXY_URL}?action=ethprice`);
-    
-    if (!response.ok) {
-      throw new Error(`API greška: ${response.status}`);
-    }
-    
     const data = await response.json();
-    console.log('Dohvaćena cijena Ethereuma:', data);
     
     if (data.status === "1" && data.result) {
-      ethPrice = {
-        usd: parseFloat(data.result.ethusd) || 0,
-        btc: parseFloat(data.result.ethbtc) || 0
-      };
+      ethPrice.usd = parseFloat(data.result.ethusd);
+      ethPrice.eur = parseFloat(data.result.etheur);
+      ethPrice.change24h = parseFloat(data.result.ethusd_timestamp);
       
-      console.log('Cijena Ethereuma:', ethPrice);
-      
-      // Ažuriraj prikaz cijene u headeru
-      prikaziCijenuEthereuma();
-      
-      // Ažuriraj i karticu s cijenom
-      const ethPriceCard = document.getElementById('eth-price-card');
-      if (ethPriceCard) {
-        ethPriceCard.textContent = `$${ethPrice.usd.toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      }
+      // Ažuriraj prikaz cijene
+      prikaziEthereumCijenu();
     } else {
-      console.error('Neispravan format odgovora za cijenu Ethereuma:', data);
+      console.error("Greška pri dohvaćanju cijene Ethereuma:", data.message || "Nepoznata greška");
     }
   } catch (error) {
-    console.error('Greška pri dohvaćanju cijene Ethereuma:', error);
+    console.error("Greška pri dohvaćanju cijene Ethereuma:", error);
   }
 }
 
@@ -84,59 +67,68 @@ async function dohvatiGasInfo() {
 // Funkcija za dohvaćanje zadnjih blokova
 async function dohvatiZadnjeBlokove() {
   try {
-    // Dohvati trenutni broj bloka
-    console.log('Dohvaćam zadnje blokove...');
-    const latestBlockResponse = await fetch(`${ETHERSCAN_PROXY_URL}?action=block&blockno=latest`);
-    
-    if (!latestBlockResponse.ok) {
-      throw new Error(`API greška: ${latestBlockResponse.status}`);
+    // Dohvati zadnji broj bloka
+    const response = await fetch(`${ETHERSCAN_PROXY_URL}?action=blocks`);
+    if (!response.ok) {
+      throw new Error(`HTTP greška: ${response.status}`);
     }
     
-    const latestBlockData = await latestBlockResponse.json();
-    console.log('Dohvaćen zadnji blok:', latestBlockData);
+    const data = await response.json();
+    console.log("Odgovor API-ja za zadnji broj bloka:", data);
     
-    if (!latestBlockData.result) {
-      throw new Error('Nije moguće dohvatiti zadnji blok');
-    }
-    
-    const latestBlockNumber = parseInt(latestBlockData.result, 16);
-    console.log('Zadnji broj bloka:', latestBlockNumber);
-    
-    // Ažuriraj karticu s zadnjim blokom
-    const latestBlockCard = document.getElementById('latest-block-card');
-    if (latestBlockCard) {
-      latestBlockCard.textContent = latestBlockNumber.toString();
-    }
-    
-    // Dohvati zadnjih 5 blokova
-    zadnjiBlokovi = [];
-    for (let i = 0; i < 5; i++) {
-      const blockNumber = latestBlockNumber - i;
-      console.log(`Dohvaćam blok ${blockNumber}...`);
-      const blockResponse = await fetch(`${ETHERSCAN_PROXY_URL}?action=block&blockno=${blockNumber}`);
+    if (data.result) {
+      // Pretvori hex broj bloka u decimalni
+      const zadnjiBrojBloka = parseInt(data.result, 16);
+      console.log("Zadnji broj bloka:", zadnjiBrojBloka);
       
-      if (!blockResponse.ok) {
-        console.error(`Greška pri dohvaćanju bloka ${blockNumber}: ${blockResponse.status}`);
-        continue;
+      // Dohvati zadnjih 5 blokova
+      const blokovi = [];
+      for (let i = 0; i < 5; i++) {
+        const brojBloka = zadnjiBrojBloka - i;
+        const blockResponse = await fetch(`${ETHERSCAN_PROXY_URL}?action=block&blockno=${brojBloka}`);
+        if (!blockResponse.ok) {
+          console.error(`Greška pri dohvaćanju bloka ${brojBloka}: ${blockResponse.status}`);
+          continue;
+        }
+        
+        const blockData = await blockResponse.json();
+        if (blockData.result) {
+          // Dodaj dodatne informacije o bloku
+          const block = blockData.result;
+          
+          // Dohvati dodatne informacije o bloku (nagradu, itd.)
+          try {
+            const blockInfoResponse = await fetch(`${ETHERSCAN_PROXY_URL}?action=getblockreward&blockno=${brojBloka}`);
+            const blockInfoData = await blockInfoResponse.json();
+            
+            if (blockInfoData.status === "1" && blockInfoData.result) {
+              // Dodaj informacije o nagradi i rudaru
+              block.blockReward = blockInfoData.result.blockReward;
+              block.timeStamp = blockInfoData.result.timeStamp;
+              block.blockNumber = brojBloka;
+              block.txn = block.transactions ? block.transactions.length : 0;
+            }
+          } catch (error) {
+            console.error(`Greška pri dohvaćanju dodatnih informacija za blok ${brojBloka}:`, error);
+          }
+          
+          blokovi.push(block);
+        }
       }
       
-      const blockData = await blockResponse.json();
-      console.log(`Dohvaćen blok ${blockNumber}:`, blockData);
-      
-      if (blockData.result) {
-        zadnjiBlokovi.push(blockData.result);
-      }
+      return blokovi;
+    } else {
+      console.error("Greška pri dohvaćanju zadnjeg broja bloka:", data.message || "Nepoznata greška");
+      return [];
     }
-    
-    // Ažuriraj prikaz zadnjih blokova
-    prikaziZadnjeBlokove();
   } catch (error) {
-    console.error('Greška pri dohvaćanju zadnjih blokova:', error);
+    console.error("Greška pri dohvaćanju zadnjih blokova:", error);
+    return [];
   }
 }
 
 // Funkcija za prikaz cijene Ethereuma
-function prikaziCijenuEthereuma() {
+function prikaziEthereumCijenu() {
   const ethPriceElement = document.getElementById('eth-price-value');
   if (ethPriceElement) {
     ethPriceElement.textContent = `$${ethPrice.usd.toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -162,37 +154,69 @@ function prikaziGasInfo() {
 }
 
 // Funkcija za prikaz zadnjih blokova
-function prikaziZadnjeBlokove() {
-  const zadnjiBlockoviElement = document.getElementById('zadnji-blokovi-tablica');
-  if (zadnjiBlockoviElement && zadnjiBlokovi.length > 0) {
-    let html = '';
+async function prikaziZadnjeBlokove() {
+  try {
+    const zadnjiBlokovi = await dohvatiZadnjeBlokove();
+    
+    if (!zadnjiBlokovi || !zadnjiBlokovi.length) {
+      console.error("Nema podataka o zadnjim blokovima");
+      return;
+    }
+    
+    const zadnjiBlokoviDiv = document.getElementById("zadnji-blokovi");
+    let html = `
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-700">
+          <thead>
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Broj bloka</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Vrijeme</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Transakcija</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Rudar</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Nagrada</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-700">
+    `;
     
     zadnjiBlokovi.forEach(blok => {
-      const timestamp = blok.timestamp ? parseInt(blok.timestamp, 16) : 0;
-      const formattedTime = formatirajVrijeme(timestamp);
-      const numTransactions = blok.transactions ? blok.transactions.length : 0;
-      const miner = blok.miner ? skratiHash(blok.miner) : 'Nepoznato';
-      const size = blok.size ? parseInt(blok.size, 16) : 0;
+      const vrijeme = new Date(blok.timeStamp * 1000);
+      const nagrada = parseFloat(blok.blockReward) / 1e18;
       
       html += `
-        <tr class="table-row">
-          <td class="px-4 py-2 text-white"><a href="#" class="text-blue-400 hover:text-blue-300" onclick="pretrazi('${blok.number}')">${parseInt(blok.number, 16)}</a></td>
-          <td class="px-4 py-2 text-gray-300">${formattedTime}</td>
-          <td class="px-4 py-2 text-gray-300">${numTransactions}</td>
-          <td class="px-4 py-2 text-gray-300"><a href="#" class="text-blue-400 hover:text-blue-300" onclick="pretrazi('${blok.miner}')">${miner}</a></td>
-          <td class="px-4 py-2 text-gray-300">${size} bajta</td>
+        <tr class="hover:bg-gray-700">
+          <td class="px-4 py-2 whitespace-nowrap">
+            <a href="#" class="text-blue-400 hover:text-blue-300" onclick="pretraziBrojBloka(${blok.blockNumber}); return false;">${blok.blockNumber}</a>
+          </td>
+          <td class="px-4 py-2 whitespace-nowrap text-gray-300">${vrijeme.toLocaleString()}</td>
+          <td class="px-4 py-2 whitespace-nowrap text-gray-300">${blok.txn}</td>
+          <td class="px-4 py-2 whitespace-nowrap">
+            <a href="#" class="text-blue-400 hover:text-blue-300" onclick="pretrazi('${blok.miner}'); return false;">${skratiHash(blok.miner)}</a>
+          </td>
+          <td class="px-4 py-2 whitespace-nowrap text-yellow-400">${nagrada.toFixed(4)} ETH</td>
         </tr>
       `;
     });
     
-    zadnjiBlockoviElement.innerHTML = html;
+    html += `
+          </tbody>
+        </table>
+      </div>
+    `;
+    
+    zadnjiBlokoviDiv.innerHTML = html;
+  } catch (error) {
+    console.error("Greška pri prikazu zadnjih blokova:", error);
   }
+}
+
+// Funkcija za pretraživanje broja bloka
+function pretraziBrojBloka(brojBloka) {
+  // Postavi broj bloka u polje za pretragu
+  document.getElementById("pretraga").value = brojBloka;
   
-  // Ažuriraj i karticu s zadnjim blokom
-  const latestBlockCard = document.getElementById('latest-block-card');
-  if (latestBlockCard && zadnjiBlokovi.length > 0) {
-    latestBlockCard.textContent = parseInt(zadnjiBlokovi[0].number, 16).toString();
-  }
+  // Pokreni pretragu
+  pretrazi(brojBloka);
 }
 
 // Funkcija za dohvaćanje statistike mreže
@@ -361,7 +385,7 @@ function prikaziTokenTransakcije() {
 }
 
 // Funkcija za dohvaćanje cijene Ethereuma
-async function dohvatiCijenuEthereuma() {
+async function dohvatiEthereumCijenu() {
   try {
     console.log('Dohvaćam cijenu Ethereuma...');
     const response = await fetch(`${ETHERSCAN_PROXY_URL}?action=ethprice`);
@@ -376,11 +400,12 @@ async function dohvatiCijenuEthereuma() {
     if (data.status === "1" && data.result) {
       ethPrice = {
         usd: parseFloat(data.result.ethusd) || 0,
-        btc: parseFloat(data.result.ethbtc) || 0
+        eur: parseFloat(data.result.etheur) || 0,
+        change24h: parseFloat(data.result.ethusd_timestamp) || 0
       };
       
       // Ažuriraj prikaz cijene u headeru
-      prikaziCijenuEthereuma();
+      prikaziEthereumCijenu();
     }
   } catch (error) {
     console.error('Greška pri dohvaćanju cijene Ethereuma:', error);
@@ -388,7 +413,7 @@ async function dohvatiCijenuEthereuma() {
 }
 
 // Funkcija za prikaz cijene Ethereuma
-function prikaziCijenuEthereuma() {
+function prikaziEthereumCijenu() {
   const ethPriceElement = document.getElementById('eth-price-value');
   if (ethPriceElement) {
     ethPriceElement.textContent = `$${ethPrice.usd.toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -653,13 +678,13 @@ async function prikaziAdresu(adresa) {
           <table class="min-w-full">
             <thead class="table-header">
               <tr>
-                <th class="px-4 py-2 text-left text-white">Hash</th>
-                <th class="px-4 py-2 text-left text-white">Blok</th>
-                <th class="px-4 py-2 text-left text-white">Vrijeme</th>
-                <th class="px-4 py-2 text-left text-white">Od</th>
-                <th class="px-4 py-2 text-left text-white">Za</th>
-                <th class="px-4 py-2 text-left text-white">Vrijednost (ETH)</th>
-                <th class="px-4 py-2 text-left text-white">Status</th>
+                <th class="px-4 py-3 text-left text-white">Hash</th>
+                <th class="px-4 py-3 text-left text-white">Blok</th>
+                <th class="px-4 py-3 text-left text-white">Vrijeme</th>
+                <th class="px-4 py-3 text-left text-white">Od</th>
+                <th class="px-4 py-3 text-left text-white">Za</th>
+                <th class="px-4 py-3 text-left text-white">Vrijednost (ETH)</th>
+                <th class="px-4 py-3 text-left text-white">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -1330,43 +1355,22 @@ function prikaziGresku(poruka) {
   rezultatDiv.style.display = "block";
 }
 
-// Inicijalizacija nakon učitavanja stranice
-document.addEventListener("DOMContentLoaded", function () {
-  console.log("DOM učitan, inicijaliziram tražilicu...");
+// Inicijalizacija aplikacije
+document.addEventListener('DOMContentLoaded', function() {
+  // Postavi event listener za pretragu
+  document.getElementById('search-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const upit = document.getElementById('pretraga').value;
+    pretrazi(upit);
+  });
   
-  // Inicijaliziraj tražilicu
-  const searchInput = document.getElementById("search-input");
-  const searchButton = document.getElementById("search-button");
-  
-  if (searchInput && searchButton) {
-    // Dodaj event listener za klik na gumb za pretraživanje
-    searchButton.addEventListener("click", function () {
-      const upit = searchInput.value.trim();
-      if (upit) {
-        pretrazi(upit);
-      }
-    });
-    
-    // Dodaj event listener za pritisak tipke Enter u polju za pretraživanje
-    searchInput.addEventListener("keypress", function (event) {
-      if (event.key === "Enter") {
-        const upit = searchInput.value.trim();
-        if (upit) {
-          pretrazi(upit);
-        }
-      }
-    });
-    
-    console.log("Tražilica inicijalizirana.");
-  } else {
-    console.error("Nedostaju elementi za tražilicu!");
-  }
-  
-  // Dohvati početne podatke
-  dohvatiCijenuEthereuma();
+  // Dohvati i prikaži početne podatke
+  dohvatiEthereumCijenu();
   dohvatiGasInfo();
-  dohvatiZadnjeBlokove();
+  dohvatiZadnjeBlokove().then(blokovi => {
+    if (blokovi && blokovi.length > 0) {
+      prikaziZadnjeBlokove();
+    }
+  });
   dohvatiStatistikuMreze();
-  
-  console.log("Dohvaćanje početnih podataka pokrenuto.");
 });

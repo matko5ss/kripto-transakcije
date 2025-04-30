@@ -114,7 +114,6 @@
       margin-bottom: 8px;
     }
   </style>
-  <script src="app.js"></script>
 </head>
 <body class="min-h-screen">
   <div class="container mx-auto px-4 py-8">
@@ -134,10 +133,10 @@
     
     <!-- Tražilica -->
     <div class="mb-8">
-      <div class="flex flex-col md:flex-row">
-        <input type="text" id="search-input" class="search-input flex-grow px-4 py-2 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Pretraži adresu, hash transakcije ili broj bloka...">
-        <button id="search-button" class="search-button px-6 py-2 rounded-r-lg text-white font-semibold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">Pretraži</button>
-      </div>
+      <form id="search-form" class="flex flex-col md:flex-row">
+        <input type="text" id="pretraga" class="search-input flex-grow px-4 py-2 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Pretraži adresu, hash transakcije ili broj bloka...">
+        <button type="submit" class="search-button px-6 py-2 rounded-r-lg text-white font-semibold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">Pretraži</button>
+      </form>
     </div>
     
     <!-- Rezultat pretrage -->
@@ -178,25 +177,11 @@
     
     <!-- Zadnji blokovi -->
     <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
-      <h2 class="text-xl font-semibold text-white mb-4">Zadnji Blokovi</h2>
-      <div class="overflow-x-auto">
-        <table class="min-w-full">
-          <thead class="table-header">
-            <tr>
-              <th class="px-4 py-2 text-left text-white">Broj Bloka</th>
-              <th class="px-4 py-2 text-left text-white">Vrijeme</th>
-              <th class="px-4 py-2 text-left text-white">Transakcije</th>
-              <th class="px-4 py-2 text-left text-white">Rudar</th>
-              <th class="px-4 py-2 text-left text-white">Veličina</th>
-            </tr>
-          </thead>
-          <tbody id="zadnji-blokovi-tablica">
-            <!-- Zadnji blokovi će biti prikazani ovdje -->
-            <tr class="table-row">
-              <td class="px-4 py-2 text-white" colspan="5">Učitavanje zadnjih blokova...</td>
-            </tr>
-          </tbody>
-        </table>
+      <h2 class="text-xl font-semibold text-white mb-4">Zadnji blokovi</h2>
+      <div id="zadnji-blokovi" class="overflow-x-auto">
+        <div class="flex justify-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
       </div>
     </div>
     
@@ -229,5 +214,8 @@
       <p class="mt-2">Izradio: Matko Hrnjkaš</p>
     </footer>
   </div>
+  
+  <!-- Učitaj JavaScript datoteku -->
+  <script src="app.js"></script>
 </body>
 </html>

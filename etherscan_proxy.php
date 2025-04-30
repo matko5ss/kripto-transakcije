@@ -88,6 +88,15 @@ switch ($action) {
         // Dohvati statistiku mreže
         $url .= '&module=stats&action=ethsupply';
         break;
+    case 'blocks':
+        // Dohvati zadnje blokove (koristimo getBlockNumber za dohvaćanje zadnjeg broja bloka,
+        // a zatim ćemo u JavaScript-u dohvatiti nekoliko prethodnih blokova)
+        $url .= '&module=proxy&action=eth_blockNumber';
+        break;
+    case 'getblockreward':
+        // Dohvati nagradu za blok
+        $url .= '&module=block&action=getblockreward&blockno=' . $blockno;
+        break;
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Nedostaje action parametar']);
