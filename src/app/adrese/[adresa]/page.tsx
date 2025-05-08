@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { dohvatiAdresu, dohvatiTransakcije, dohvatiTokene, dohvatiCijenuEthera } from '@/services/moralis';
-import { FaWallet, FaExchangeAlt, FaCoins } from 'react-icons/fa';
+import { dohvatiAdresu, dohvatiTransakcije, dohvatiTokene, dohvatiCijenuEthera, dohvatiAdresuStatistiku } from '@/services/dune';
+import { FaWallet, FaExchangeAlt, FaCoins, FaInfoCircle, FaGasPump } from 'react-icons/fa';
 import TransakcijeTabela from '@/components/TransakcijeTabela';
 
 interface AdresaDetaljiProps {
@@ -30,6 +30,9 @@ export default async function AdresaDetalji({ params }: AdresaDetaljiProps) {
   
   const tokeni = await dohvatiTokene(adresa);
   const cijenaEthera = await dohvatiCijenuEthera();
+  
+  // Dohvaćamo statistiku adrese za detaljnije informacije
+  const statistika = await dohvatiAdresuStatistiku(adresa);
 
   if (!adresaPodaci) {
     return (
@@ -46,6 +49,12 @@ export default async function AdresaDetalji({ params }: AdresaDetaljiProps) {
   // Formatiranje ETH vrijednosti
   const stanjeEth = parseFloat(adresaPodaci.balance) / 1e18;
   const stanjeUsd = stanjeEth * cijenaEthera;
+  
+  // Provjera je li adresa potencijalno ugovor (contract)
+  const jeUgovor = adresaPodaci.isContract || false;
+  
+  // Dohvaćanje prve transakcije (za datum stvaranja)
+  const prvaTransakcija = adresaPodaci.firstSeen ? new Date(adresaPodaci.firstSeen) : null;
 
   return (
     <div className="space-y-6">
@@ -56,9 +65,16 @@ export default async function AdresaDetalji({ params }: AdresaDetaljiProps) {
       
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-4 bg-purple-50 border-b">
-          <h2 className="font-mono text-sm break-all">
-            {adresa}
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-mono text-sm break-all">
+              {adresa}
+            </h2>
+            {jeUgovor && (
+              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                Ugovor
+              </span>
+            )}
+          </div>
         </div>
         
         <div className="p-6">
@@ -77,6 +93,131 @@ export default async function AdresaDetalji({ params }: AdresaDetaljiProps) {
         </div>
       </div>
       
+      {/* Dodatne informacije o adresi */}
+      <div className="flex items-center space-x-2">
+        <FaInfoCircle className="text-green-600" />
+        <h2 className="text-xl font-semibold">Više informacija</h2>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">Pregled adrese</h2>
+        </div>
+        
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-gray-500 mb-2">Osnovne informacije</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Tip:</span>
+                  <span className="font-medium">{jeUgovor ? 'Ugovor' : 'Korisnički račun'}</span>
+                </div>
+                {jeUgovor && adresaPodaci.contractCreator && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Kreator ugovora:</span>
+                    <Link href={`/adrese/${adresaPodaci.contractCreator}`} className="font-medium text-blue-600 hover:underline">
+                      {adresaPodaci.contractCreator.substring(0, 8)}...{adresaPodaci.contractCreator.substring(adresaPodaci.contractCreator.length - 6)}
+                    </Link>
+                  </div>
+                )}
+                {jeUgovor && adresaPodaci.contractCreationTx && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Transakcija kreiranja:</span>
+                    <Link href={`/transakcije/${adresaPodaci.contractCreationTx}`} className="font-medium text-blue-600 hover:underline">
+                      {adresaPodaci.contractCreationTx.substring(0, 8)}...{adresaPodaci.contractCreationTx.substring(adresaPodaci.contractCreationTx.length - 6)}
+                    </Link>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Prvo viđeno:</span>
+                  <span className="font-medium">{prvaTransakcija ? prvaTransakcija.toLocaleDateString('hr-HR') : 'Nepoznato'}</span>
+                </div>
+                {adresaPodaci.lastSeen && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Zadnja aktivnost:</span>
+                    <span className="font-medium">{new Date(adresaPodaci.lastSeen).toLocaleDateString('hr-HR')}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">ETH stanje:</span>
+                  <span className="font-medium">{stanjeEth.toFixed(6)} ETH</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">USD vrijednost:</span>
+                  <span className="font-medium">${stanjeUsd.toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">ERC-20 tokeni:</span>
+                  <span className="font-medium">{tokeni.length}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-gray-500 mb-2">Statistika transakcija</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Ukupno transakcija:</span>
+                  <span className="font-medium">{adresaPodaci.nonce || '0'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Poslano:</span>
+                  <span className="font-medium">{statistika.poslanoTransakcija} transakcija</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Primljeno:</span>
+                  <span className="font-medium">{statistika.primljenoTransakcija} transakcija</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Poslano ETH:</span>
+                  <span className="font-medium">{statistika.poslanoEth.toFixed(4)} ETH</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Primljeno ETH:</span>
+                  <span className="font-medium">{statistika.primljenoEth.toFixed(4)} ETH</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Statistika gasa */}
+      <div className="flex items-center space-x-2">
+        <FaGasPump className="text-red-600" />
+        <h2 className="text-xl font-semibold">Statistika gasa</h2>
+      </div>
+      
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold">Potrošnja gasa</h2>
+        </div>
+        
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-gray-500 mb-2">Ukupna potrošnja</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Prosječni gas po transakciji:</span>
+                  <span className="font-medium">{statistika.prosjecniGas.toFixed(6)} ETH</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Ukupno potrošeno za gas:</span>
+                  <span className="font-medium">{statistika.ukupnoPotrosenoGas.toFixed(6)} ETH</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">USD vrijednost potrošenog gasa:</span>
+                  <span className="font-medium">${(statistika.ukupnoPotrosenoGas * cijenaEthera).toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Transakcije */}
       <div className="flex items-center space-x-2">
         <FaExchangeAlt className="text-blue-600" />
         <h2 className="text-xl font-semibold">Transakcije</h2>
@@ -97,6 +238,7 @@ export default async function AdresaDetalji({ params }: AdresaDetaljiProps) {
         </div>
       )}
       
+      {/* Tokeni */}
       <div className="flex items-center space-x-2">
         <FaCoins className="text-yellow-600" />
         <h2 className="text-xl font-semibold">Tokeni</h2>
@@ -129,6 +271,7 @@ export default async function AdresaDetalji({ params }: AdresaDetaljiProps) {
               {tokeni.length > 0 ? (
                 tokeni.map((token) => {
                   const tokenStanje = parseFloat(token.balance) / Math.pow(10, parseInt(token.decimals));
+                  const tokenVrijednost = token.price ? parseFloat(token.price) * tokenStanje : null;
                   
                   return (
                     <tr key={token.contractAddress} className="hover:bg-gray-50">
@@ -144,7 +287,10 @@ export default async function AdresaDetalji({ params }: AdresaDetaljiProps) {
                         <div className="text-sm text-gray-900">{tokenStanje.toLocaleString('hr-HR')}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        Nije dostupno
+                        {tokenVrijednost 
+                          ? `$${tokenVrijednost.toLocaleString('hr-HR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : 'Nije dostupno'
+                        }
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono truncate max-w-xs">
                         <Link href={`/adrese/${token.contractAddress}`} className="text-blue-600 hover:underline">

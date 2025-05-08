@@ -1,6 +1,6 @@
 import Pretrazivac from '@/components/Pretrazivac';
 import TransakcijeTabela from '@/components/TransakcijeTabela';
-import { dohvatiTransakcije } from '@/services/moralis';
+import { dohvatiTransakcije } from '@/services/dune';
 
 export default async function TransakcijePage() {
   // Dohvaćamo zadnjih 20 transakcija

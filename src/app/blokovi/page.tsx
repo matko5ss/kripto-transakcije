@@ -1,9 +1,9 @@
 import Pretrazivac from '@/components/Pretrazivac';
-import { dohvatiBlokove } from '@/services/moralis';
+import { dohvatiBlokove } from '@/services/dune';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { hr } from 'date-fns/locale';
-import { FaCubes } from 'react-icons/fa';
+import { FaCube } from 'react-icons/fa';
 
 export default async function BlokoviPage() {
   // Dohvaćamo zadnjih 15 blokova
@@ -27,7 +27,7 @@ export default async function BlokoviPage() {
       
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-4 border-b flex items-center space-x-2">
-          <FaCubes className="text-green-600" />
+          <FaCube className="text-green-600" />
           <h2 className="text-lg font-semibold">Zadnji blokovi na Ethereum mreži</h2>
         </div>
         

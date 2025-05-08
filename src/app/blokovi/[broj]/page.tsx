@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { dohvatiBlok, dohvatiTransakcije } from '@/services/moralis';
+import { dohvatiBlok, dohvatiTransakcije } from '@/services/dune';
 import { formatDistanceToNow } from 'date-fns';
 import { hr } from 'date-fns/locale';
 import { FaCube, FaExchangeAlt } from 'react-icons/fa';

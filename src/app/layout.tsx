@@ -30,7 +30,7 @@ export default function RootLayout({
                 <p className="text-sm text-gray-400">Hrvatski blockchain explorer</p>
               </div>
               <div className="text-sm text-gray-400">
-                {new Date().getFullYear()} Kripto Transakcije. Sva prava pridržana.
+                <span suppressHydrationWarning>{new Date().getFullYear()}</span> Kripto Transakcije. Sva prava pridržana.
               </div>
             </div>
           </div>

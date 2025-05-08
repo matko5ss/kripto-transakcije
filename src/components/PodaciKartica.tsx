@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 
 interface PodaciKarticaProps {
   naslov: string;
@@ -8,9 +8,12 @@ interface PodaciKarticaProps {
   ikona?: ReactNode;
   boja?: string;
   promjena?: number;
+  tooltip?: string;
 }
 
-export default function PodaciKartica({ naslov, vrijednost, ikona, boja = 'blue', promjena }: PodaciKarticaProps) {
+export default function PodaciKartica({ naslov, vrijednost, ikona, boja = 'blue', promjena, tooltip }: PodaciKarticaProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  
   const bojaPozadine = {
     blue: 'bg-blue-100 text-blue-800',
     green: 'bg-green-100 text-green-800',
@@ -26,8 +29,20 @@ export default function PodaciKartica({ naslov, vrijednost, ikona, boja = 'blue'
         {ikona && <div className={`p-2 rounded-full ${bojaPozadine}`}>{ikona}</div>}
       </div>
       
-      <div className="flex items-end">
-        <div className="text-2xl font-bold">{vrijednost}</div>
+      <div className="flex items-end relative">
+        <div 
+          className="text-2xl font-bold"
+          onMouseEnter={() => tooltip && setShowTooltip(true)}
+          onMouseLeave={() => tooltip && setShowTooltip(false)}
+        >
+          {vrijednost}
+          
+          {tooltip && showTooltip && (
+            <div className="absolute bottom-full left-0 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg whitespace-nowrap">
+              {tooltip}
+            </div>
+          )}
+        </div>
         
         {promjena !== undefined && (
           <div className={`ml-2 text-sm ${promjena >= 0 ? 'text-green-600' : 'text-red-600'}`}>

@@ -186,7 +186,7 @@ async function prikaziZadnjeBlokove() {
       html += `
         <tr class="hover:bg-gray-700">
           <td class="px-4 py-2 whitespace-nowrap">
-            <a href="#" class="text-blue-400 hover:text-blue-300" onclick="pretraziBrojBloka(${blok.blockNumber}); return false;">${blok.blockNumber}</a>
+            <a href="#" class="text-blue-400 hover:text-blue-300" onclick="pretrazi(${blok.blockNumber}); return false;">${blok.blockNumber}</a>
           </td>
           <td class="px-4 py-2 whitespace-nowrap text-gray-300">${vrijeme.toLocaleString()}</td>
           <td class="px-4 py-2 whitespace-nowrap text-gray-300">${blok.txn}</td>
@@ -211,6 +211,7 @@ async function prikaziZadnjeBlokove() {
 }
 
 // Funkcija za pretraživanje broja bloka
+/* Commented out because it's unused
 function pretraziBrojBloka(brojBloka) {
   // Postavi broj bloka u polje za pretragu
   document.getElementById("pretraga").value = brojBloka;
@@ -218,6 +219,7 @@ function pretraziBrojBloka(brojBloka) {
   // Pokreni pretragu
   pretrazi(brojBloka);
 }
+*/
 
 // Funkcija za dohvaćanje statistike mreže
 async function dohvatiStatistikuMreze() {
@@ -289,6 +291,7 @@ async function dohvatiTokenTransakcije(adresa, limit = 10) {
 }
 
 // Funkcija za dohvaćanje NFT transakcija za adresu
+/* Commented out because it's unused
 async function dohvatiNFTTransakcije(adresa, limit = 10) {
   try {
     console.log(`Dohvaćam NFT transakcije za adresu ${adresa}...`);
@@ -321,8 +324,10 @@ async function dohvatiNFTTransakcije(adresa, limit = 10) {
     return [];
   }
 }
+*/
 
 // Funkcija za dohvaćanje izrudarenih blokova za adresu
+/* Commented out because it's unused
 async function dohvatiIzrudareneBlokove(adresa, limit = 10) {
   try {
     console.log(`Dohvaćam izrudarene blokove za adresu ${adresa}...`);
@@ -350,6 +355,7 @@ async function dohvatiIzrudareneBlokove(adresa, limit = 10) {
     return [];
   }
 }
+*/
 
 // Funkcija za prikaz statistike mreže
 function prikaziStatistikuMreze() {
