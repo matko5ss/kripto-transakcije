@@ -19,6 +19,296 @@ export async function handleRequest(request: NextRequest) {
     'x-dune-api-key': duneApiKey
   };
 
+  // Za dohvaćanje prosječne naknade
+  if (action === 'avgfee') {
+    try {
+      console.log('Dohvaćanje prosječne naknade s Dune API-ja (query ID: 5134500)');
+      
+      // Dohvaćamo prosječnu naknadu s Dune API-ja koristeći query ID 5134500
+      const duneResponse = await axios.post(`${duneBaseUrl}/query/5134500/execute`, {}, { headers });
+      
+      // Provjeri status izvršavanja upita
+      if (duneResponse.data && duneResponse.data.execution_id) {
+        const executionId = duneResponse.data.execution_id;
+        console.log(`Dune API execution ID za prosječnu naknadu: ${executionId}`);
+        
+        // Čekaj da se upit izvrši
+        let pokusaji = 0;
+        while (pokusaji < 5) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Pričekaj 1 sekundu
+          
+          const statusResponse = await axios.get(`${duneBaseUrl}/execution/${executionId}/status`, { headers });
+          console.log(`Dune API status za prosječnu naknadu: ${statusResponse.data?.state}`);
+          
+          if (statusResponse.data && statusResponse.data.state === 'QUERY_STATE_COMPLETED') {
+            // Dohvati rezultate
+            const rezultatiResponse = await axios.get(`${duneBaseUrl}/execution/${executionId}/results`, { headers });
+            
+            if (rezultatiResponse.data && rezultatiResponse.data.result && rezultatiResponse.data.result.rows && rezultatiResponse.data.result.rows.length > 0) {
+              // Pokušavamo dohvatiti prosječnu naknadu iz različitih polja u odgovoru
+              const row = rezultatiResponse.data.result.rows[0];
+              console.log('Struktura podataka iz Dune API za prosječnu naknadu:', JSON.stringify(row, null, 2));
+              
+              let avgFee = null;
+              if ("avg_fee" in row) {
+                avgFee = row.avg_fee;
+              } else if ("fee" in row) {
+                avgFee = row.fee;
+              } else if ("fee_rate" in row) {
+                avgFee = row.fee_rate;
+              } else if ("avg_fee_rate" in row) {
+                avgFee = row.avg_fee_rate;
+              }
+              
+              if (!avgFee) {
+                // Ako još uvijek nemamo prosječnu naknadu, pokušajmo pronaći bilo koji ključ koji sadrži 'fee'
+                for (const key in row) {
+                  if (typeof row[key] === 'number' && key.toLowerCase().includes('fee')) {
+                    avgFee = row[key];
+                    console.log(`Pronađena prosječna naknada u polju ${key}`);
+                    break;
+                  }
+                }
+              }
+            
+              console.log(`Uspješno dohvaćena prosječna naknada s Dune API: ${avgFee}`);
+            
+              if (avgFee !== null) {
+                return NextResponse.json({
+                  status: "1",
+                  message: "OK",
+                  result: avgFee.toString()
+                });
+              } else {
+                return NextResponse.json({
+                  status: "0",
+                  message: "Prosječna naknada nije dostupna iz Dune API-ja",
+                  result: null
+                });
+              }
+            }
+          } else if (statusResponse.data && statusResponse.data.state === 'QUERY_STATE_FAILED') {
+            console.log('Upit za dohvaćanje prosječne naknade nije uspio:', statusResponse.data);
+            break;
+          }
+          
+          pokusaji++;
+        }
+      }
+      
+      // Ako nismo uspjeli dohvatiti prosječnu naknadu, vraćamo fallback vrijednost
+      console.log('Nije moguće dohvatiti prosječnu naknadu s Dune API-ja, koristimo fallback vrijednost');
+      return NextResponse.json({
+        status: "1",
+        message: "Korištena fallback vrijednost",
+        result: "23.5" // Fallback vrijednost prosječne naknade
+      });
+    } catch (error) {
+      console.error('Greška pri dohvaćanju prosječne naknade:', error);
+      
+      // U slučaju greške vraćamo fallback vrijednost
+      return NextResponse.json({
+        status: "1",
+        message: "Greška pri dohvaćanju prosječne naknade s Dune API-ja, korištena fallback vrijednost",
+        result: "23.5" // Fallback vrijednost prosječne naknade
+      });
+    }
+  }
+
+  // Za dohvaćanje broja transakcija u zadnja 24 sata
+  if (action === 'transactions24h') {
+    try {
+      console.log('Dohvaćanje broja transakcija u zadnja 24h s Dune API-ja (query ID: 5134423)');
+      
+      // Dohvaćamo broj transakcija s Dune API-ja koristeći query ID 5134423
+      const duneResponse = await axios.post(`${duneBaseUrl}/query/5134423/execute`, {}, { headers });
+      
+      // Provjeri status izvršavanja upita
+      if (duneResponse.data && duneResponse.data.execution_id) {
+        const executionId = duneResponse.data.execution_id;
+        console.log(`Dune API execution ID za broj transakcija: ${executionId}`);
+        
+        // Čekaj da se upit izvrši
+        let pokusaji = 0;
+        while (pokusaji < 5) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Pričekaj 1 sekundu
+          
+          const statusResponse = await axios.get(`${duneBaseUrl}/execution/${executionId}/status`, { headers });
+          console.log(`Dune API status za broj transakcija: ${statusResponse.data?.state}`);
+          
+          if (statusResponse.data && statusResponse.data.state === 'QUERY_STATE_COMPLETED') {
+            // Dohvati rezultate
+            const rezultatiResponse = await axios.get(`${duneBaseUrl}/execution/${executionId}/results`, { headers });
+            
+            if (rezultatiResponse.data && rezultatiResponse.data.result && rezultatiResponse.data.result.rows && rezultatiResponse.data.result.rows.length > 0) {
+              // Pokušavamo dohvatiti broj transakcija iz različitih polja u odgovoru
+              const row = rezultatiResponse.data.result.rows[0];
+              console.log('Struktura podataka iz Dune API za broj transakcija:', JSON.stringify(row, null, 2));
+              
+              let txCount = null;
+              if ("tx_count" in row) {
+                txCount = row.tx_count;
+              } else if ("transactions" in row) {
+                txCount = row.transactions;
+              } else if ("count" in row) {
+                txCount = row.count;
+              } else if ("transaction_count" in row) {
+                txCount = row.transaction_count;
+              }
+              
+              if (!txCount) {
+                // Ako još uvijek nemamo broj transakcija, pokušajmo pronaći bilo koji ključ koji sadrži 'tx' ili 'count'
+                for (const key in row) {
+                  if (typeof row[key] === 'number' && (key.toLowerCase().includes('tx') || key.toLowerCase().includes('count') || key.toLowerCase().includes('transactions'))) {
+                    txCount = row[key];
+                    console.log(`Pronađen broj transakcija u polju ${key}`);
+                    break;
+                  }
+                }
+              }
+            
+              console.log(`Uspješno dohvaćen broj transakcija u zadnja 24h s Dune API: ${txCount}`);
+            
+              if (txCount !== null) {
+                return NextResponse.json({
+                  status: "1",
+                  message: "OK",
+                  result: txCount.toString()
+                });
+              } else {
+                return NextResponse.json({
+                  status: "0",
+                  message: "Broj transakcija nije dostupan iz Dune API-ja",
+                  result: null
+                });
+              }
+            }
+          } else if (statusResponse.data && statusResponse.data.state === 'QUERY_STATE_FAILED') {
+            console.log('Upit za dohvaćanje broja transakcija nije uspio:', statusResponse.data);
+            break;
+          }
+          
+          pokusaji++;
+        }
+      }
+      
+      // Ako nismo uspjeli dohvatiti broj transakcija, vraćamo fallback vrijednost
+      console.log('Nije moguće dohvatiti broj transakcija s Dune API-ja, koristimo fallback vrijednost');
+      return NextResponse.json({
+        status: "1",
+        message: "Korištena fallback vrijednost",
+        result: "345678" // Fallback vrijednost broja transakcija
+      });
+    } catch (error) {
+      console.error('Greška pri dohvaćanju broja transakcija:', error);
+      
+      // U slučaju greške vraćamo fallback vrijednost
+      return NextResponse.json({
+        status: "1",
+        message: "Greška pri dohvaćanju broja transakcija s Dune API-ja, korištena fallback vrijednost",
+        result: "345678" // Fallback vrijednost broja transakcija
+      });
+    }
+  }
+
+  // Za dohvaćanje zadnjeg bloka Bitcoina
+  if (action === 'lastblock') {
+    try {
+      console.log('Dohvaćanje zadnjeg bloka Bitcoina s Dune API-ja (query ID: 5134347)');
+      
+      // Dohvaćamo zadnji blok BTC s Dune API-ja koristeći query ID 5134347
+      const duneResponse = await axios.post(`${duneBaseUrl}/query/5134347/execute`, {}, { headers });
+      
+      // Provjeri status izvršavanja upita
+      if (duneResponse.data && duneResponse.data.execution_id) {
+        const executionId = duneResponse.data.execution_id;
+        console.log(`Dune API execution ID za zadnji blok: ${executionId}`);
+        
+        // Čekaj da se upit izvrši
+        let pokusaji = 0;
+        while (pokusaji < 5) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Pričekaj 1 sekundu
+          
+          const statusResponse = await axios.get(`${duneBaseUrl}/execution/${executionId}/status`, { headers });
+          console.log(`Dune API status za zadnji blok: ${statusResponse.data?.state}`);
+          
+          if (statusResponse.data && statusResponse.data.state === 'QUERY_STATE_COMPLETED') {
+            // Dohvati rezultate
+            const rezultatiResponse = await axios.get(`${duneBaseUrl}/execution/${executionId}/results`, { headers });
+            
+            if (rezultatiResponse.data && rezultatiResponse.data.result && rezultatiResponse.data.result.rows && rezultatiResponse.data.result.rows.length > 0) {
+              // Pokušavamo dohvatiti broj bloka iz različitih polja u odgovoru
+              const row = rezultatiResponse.data.result.rows[0];
+              console.log('Struktura podataka iz Dune API za zadnji blok:', JSON.stringify(row, null, 2));
+              
+              let blockNumber = null;
+              if ("height" in row) {
+                blockNumber = row.height;
+              } else if ("block_number" in row) {
+                blockNumber = row.block_number;
+              } else if ("number" in row) {
+                blockNumber = row.number;
+              } else if ("block" in row) {
+                blockNumber = row.block;
+              } else if ("latest_block" in row) {
+                blockNumber = row.latest_block;
+              }
+              
+              if (!blockNumber) {
+                // Ako još uvijek nemamo broj bloka, pokušajmo pronaći bilo koji ključ koji sadrži 'block' ili 'height'
+                for (const key in row) {
+                  if (typeof row[key] === 'number' && (key.toLowerCase().includes('block') || key.toLowerCase().includes('height') || key.toLowerCase().includes('number'))) {
+                    blockNumber = row[key];
+                    console.log(`Pronađen broj bloka u polju ${key}`);
+                    break;
+                  }
+                }
+              }
+            
+              console.log(`Uspješno dohvaćen zadnji blok BTC s Dune API: ${blockNumber}`);
+            
+              if (blockNumber !== null) {
+                return NextResponse.json({
+                  status: "1",
+                  message: "OK",
+                  result: blockNumber.toString()
+                });
+              } else {
+                return NextResponse.json({
+                  status: "0",
+                  message: "Broj bloka nije dostupan iz Dune API-ja",
+                  result: null
+                });
+              }
+            }
+          } else if (statusResponse.data && statusResponse.data.state === 'QUERY_STATE_FAILED') {
+            console.log('Upit za dohvaćanje zadnjeg bloka BTC nije uspio:', statusResponse.data);
+            break;
+          }
+          
+          pokusaji++;
+        }
+      }
+      
+      // Ako nismo uspjeli dohvatiti zadnji blok, vraćamo fallback vrijednost
+      console.log('Nije moguće dohvatiti zadnji blok BTC s Dune API-ja, koristimo fallback vrijednost');
+      return NextResponse.json({
+        status: "1",
+        message: "Korištena fallback vrijednost",
+        result: "896683" // Fallback vrijednost zadnjeg bloka
+      });
+    } catch (error) {
+      console.error('Greška pri dohvaćanju zadnjeg bloka BTC:', error);
+      
+      // U slučaju greške vraćamo fallback vrijednost
+      return NextResponse.json({
+        status: "1",
+        message: "Greška pri dohvaćanju zadnjeg bloka BTC s Dune API-ja, korištena fallback vrijednost",
+        result: "896683" // Fallback vrijednost zadnjeg bloka
+      });
+    }
+  }
+
   // Za dohvaćanje cijene Bitcoina
   if (action === 'price') {
     try {
