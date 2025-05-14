@@ -22,7 +22,8 @@ export default function Pretrazivac() {
       } 
       // Provjera je li upit adresa (0x + 40 znakova)
       else if (/^0x[a-fA-F0-9]{40}$/.test(upit)) {
-        router.push(`/adrese/${upit}`);
+        // Preusmjeravamo na Ethereum stranicu s adresom kao parametrom za prikaz tokena
+        router.push(`/ethereum?adresa=${upit}`);
       } 
       // Provjera je li upit broj bloka
       else if (/^\d+$/.test(upit)) {

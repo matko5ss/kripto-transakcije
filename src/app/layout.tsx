@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigacija from "@/components/Navigacija";
+import { DuneEchoProvider } from "@/components/DuneEchoProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,10 +19,11 @@ export default function RootLayout({
   return (
     <html lang="hr">
       <body className={`${inter.className} bg-gray-100 min-h-screen`}>
-        <Navigacija />
-        <main className="container mx-auto py-6 px-4">
-          {children}
-        </main>
+        <DuneEchoProvider>
+          <Navigacija />
+          <main className="container mx-auto py-6 px-4">
+            {children}
+          </main>
         <footer className="bg-gray-800 text-white py-6">
           <div className="container mx-auto px-4">
             <div className="flex flex-col md:flex-row justify-between items-center">
@@ -35,6 +37,7 @@ export default function RootLayout({
             </div>
           </div>
         </footer>
+        </DuneEchoProvider>
       </body>
     </html>
   );

@@ -278,9 +278,14 @@ export async function dohvatiBitcoinAdresu(adresa: string): Promise<BitcoinAdres
   }
 }
 
-export async function dohvatiBitcoinCijenu(): Promise<number> {
+export interface BitcoinCijena {
+  usd: number;
+  eur: number;
+}
+
+export async function dohvatiBitcoinCijenu(): Promise<BitcoinCijena | null> {
   try {
-    console.log('Dohvaćanje cijene Bitcoin-a');
+    console.log('Dohvaćanje cijene Bitcoin-a preko Dune API-ja (Query ID: 5132855)');
     
     // Dohvaćamo cijenu s API-ja
     const response = await duneApiBitcoin.get('', {
@@ -289,19 +294,26 @@ export async function dohvatiBitcoinCijenu(): Promise<number> {
       }
     });
     
+    console.log('Odgovor od API-ja:', JSON.stringify(response.data, null, 2));
+    
     // Ako je odgovor uspješan i ima rezultata, parsiramo ih
     if (response.data && response.data.status === "1" && response.data.result && response.data.result.price) {
-      const cijena = parseFloat(response.data.result.price);
-      console.log('Dohvaćena cijena Bitcoin-a:', cijena);
+      const cijenaUSD = parseFloat(response.data.result.price);
+      const cijenaEUR = response.data.result.price_eur ? parseFloat(response.data.result.price_eur) : cijenaUSD * 0.89;
       
-      return cijena;
+      console.log('Dohvaćena cijena Bitcoin-a: $' + cijenaUSD + ' / €' + cijenaEUR);
+      
+      return {
+        usd: cijenaUSD,
+        eur: cijenaEUR
+      };
     }
     
-    console.log('Nema cijene Bitcoin-a, koristimo fallback vrijednost');
-    return 93895.00; // Aktualnija fallback vrijednost
+    console.log('Nema cijene Bitcoin-a iz Dune API-ja');
+    return null; // Vraćamo null umjesto fallback vrijednosti
   } catch (error) {
     console.error('Greška pri dohvaćanju cijene Bitcoin-a:', error);
-    return 93895.00; // Aktualnija fallback vrijednost
+    return null; // Vraćamo null umjesto fallback vrijednosti
   }
 }
 

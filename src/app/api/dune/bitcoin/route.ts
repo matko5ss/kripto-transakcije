@@ -22,25 +22,105 @@ export async function handleRequest(request: NextRequest) {
   // Za dohvaćanje cijene Bitcoina
   if (action === 'price') {
     try {
-      // Vraćamo fallback vrijednost odmah da se stranica može učitati
-      console.log('Korištenje fallback cijene BTC: 93895.00');
-      return NextResponse.json({
-        status: "1",
-        message: "OK",
-        result: {
-          price: "93895.00"
+      console.log('Dohvaćanje cijene Bitcoina s Dune API-ja (query ID: 5132855)');
+      
+      // Dohvaćamo cijenu BTC s Dune API-ja koristeći query ID 5132855
+      const duneResponse = await axios.post(`${duneBaseUrl}/query/5132855/execute`, {}, { headers });
+      
+      // Provjeri status izvršavanja upita
+      if (duneResponse.data && duneResponse.data.execution_id) {
+        const executionId = duneResponse.data.execution_id;
+        console.log(`Dune API execution ID: ${executionId}`);
+        
+        // Čekaj da se upit izvrši
+        let pokusaji = 0;
+        while (pokusaji < 5) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Pričekaj 1 sekundu
+          
+          const statusResponse = await axios.get(`${duneBaseUrl}/execution/${executionId}/status`, { headers });
+          console.log(`Dune API status: ${statusResponse.data?.state}`);
+          
+          if (statusResponse.data && statusResponse.data.state === 'QUERY_STATE_COMPLETED') {
+            // Dohvati rezultate
+            const rezultatiResponse = await axios.get(`${duneBaseUrl}/execution/${executionId}/results`, { headers });
+            
+            if (rezultatiResponse.data && rezultatiResponse.data.result && rezultatiResponse.data.result.rows && rezultatiResponse.data.result.rows.length > 0) {
+              // Pokušavamo dohvatiti cijenu iz različitih polja u odgovoru
+              const row = rezultatiResponse.data.result.rows[0];
+              console.log('Struktura podataka iz Dune API:', JSON.stringify(row, null, 2));
+              
+              let price = null;
+              if ("price_usd" in row) {
+                price = row.price_usd;
+              } else if ("price" in row) {
+                price = row.price;
+              } else if ("current_price" in row) {
+                price = row.current_price;
+              }
+              
+              if (!price) {
+                // Ako još uvijek nemamo cijenu, pokušajmo pronaći bilo koji ključ koji sadrži 'price'
+                for (const key in row) {
+                  if (typeof row[key] === 'number' && key.toLowerCase().includes('price')) {
+                    price = row[key];
+                    console.log(`Pronađena cijena u polju ${key}`);
+                    break;
+                  }
+                }
+              }
+            
+              console.log(`Uspješno dohvaćena cijena BTC s Dune API: $${price}`);
+            
+              if (price) {
+                // Dohvaćamo cijenu u eurima iz odgovora ili računamo konverziju
+                let priceEur = null;
+                if ("price_eur" in row) {
+                  priceEur = row.price_eur;
+                } else {
+                  // Aproksimativna konverzija USD u EUR (1 USD = 0.89 EUR)
+                  priceEur = price * 0.89;
+                }
+                
+                return NextResponse.json({
+                  status: "1",
+                  message: "OK",
+                  result: {
+                    price: price.toString(),
+                    price_eur: priceEur.toString()
+                  }
+                });
+              } else {
+                return NextResponse.json({
+                  status: "0",
+                  message: "Cijena nije dostupna iz Dune API-ja",
+                  result: null
+                });
+              }
+            }
+          } else if (statusResponse.data && statusResponse.data.state === 'QUERY_STATE_FAILED') {
+            console.log('Upit za dohvaćanje cijene BTC nije uspio:', statusResponse.data);
+            break;
+          }
+          
+          pokusaji++;
         }
+      }
+      
+      // Ako nismo uspjeli dohvatiti cijenu, vraćamo grešku
+      console.log('Nije moguće dohvatiti cijenu BTC s Dune API-ja');
+      return NextResponse.json({
+        status: "0",
+        message: "Nije moguće dohvatiti cijenu BTC s Dune API-ja",
+        result: null
       });
     } catch (error) {
       console.error('Greška pri dohvaćanju cijene BTC:', error);
       
-      // U slučaju greške vraćamo fallback vrijednost
+      // U slučaju greške vraćamo poruku o grešci
       return NextResponse.json({
-        status: "1",
-        message: "OK",
-        result: {
-          price: "93895.00"
-        }
+        status: "0",
+        message: "Greška pri dohvaćanju cijene BTC s Dune API-ja",
+        result: null
       });
     }
   }

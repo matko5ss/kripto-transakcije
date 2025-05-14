@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { dohvatiAdresu, dohvatiTransakcije, dohvatiTokene, dohvatiCijenuEthera, dohvatiAdresuStatistiku } from '@/services/dune';
 import { FaWallet, FaExchangeAlt, FaCoins, FaInfoCircle, FaGasPump } from 'react-icons/fa';
 import TransakcijeTabela from '@/components/TransakcijeTabela';
+import DuneEchoWrapper from '@/components/DuneEchoWrapper';
 
 interface AdresaDetaljiProps {
   params: {
@@ -215,6 +216,48 @@ export default async function AdresaDetalji({ params }: AdresaDetaljiProps) {
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Tokeni i Transakcije s Dune Echo Hooks */}
+      <DuneEchoWrapper adresa={adresa} />
+      
+      {/* Tokeni - statički podaci */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Tokeni (statički podaci)</h2>
+        
+        {tokeni.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">Nema pronađenih tokena za ovu adresu</p>
+        ) : (
+          <div className="space-y-4">
+            {tokeni.map((token, index) => (
+              <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                    <span className="font-bold text-sm">{token.symbol.substring(0, 2)}</span>
+                  </div>
+                  <div>
+                    <p className="font-medium">{token.symbol}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{token.name}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">{(parseFloat(token.balance) / Math.pow(10, parseInt(token.decimals))).toFixed(6)}</p>
+                  {cijenaEthera && token.symbol === 'ETH' && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      ${((parseFloat(token.balance) / Math.pow(10, parseInt(token.decimals))) * cijenaEthera).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Transakcije - statički podaci */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-6">
+        <h2 className="text-xl font-semibold mb-4">Zadnje transakcije (statički podaci)</h2>
+        <TransakcijeTabela transakcije={transakcije} />
       </div>
       
       {/* Transakcije */}

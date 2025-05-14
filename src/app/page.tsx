@@ -225,7 +225,7 @@ export default function Home() {
                 </p>
                 
                 <div className="mt-2 text-blue-500 flex items-center justify-center text-sm">
-                  {blockchain.id === "ethereum" || blockchain.id === "bitcoin" ? "Istražite transakcije" : "Uskoro dostupno"}
+                  {blockchain.id === "ethereum" || blockchain.id === "bitcoin" || blockchain.id === "solana" ? "Istražite transakcije" : "Uskoro dostupno"}
                   <FaArrowRight className="ml-1 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
@@ -236,7 +236,7 @@ export default function Home() {
       
       <div className="mt-12 text-center text-gray-600 dark:text-gray-400">
         <p className="mb-2">
-          Trenutno je potpuno funkcionalna samo Ethereum tražilica. Ostale blockchain tražilice bit će dostupne uskoro.
+          Trenutno su potpuno funkcionalne Ethereum, Bitcoin i Solana tražilice. Ostale blockchain tražilice bit će dostupne uskoro.
         </p>
         <p>
           &copy; {new Date().getFullYear()} Kripto Transakcije - Sva prava pridržana

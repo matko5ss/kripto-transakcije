@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --bitcoin: #F7931A;
+  --bitcoin-dark: #E07D16;
   
   /* Replaced @theme with standard CSS custom properties */
   --color-background: var(--background);
@@ -16,6 +18,27 @@
     --background: #0a0a0a;
     --foreground: #6a7282;
   }
+}
+
+/* Bitcoin utility classes */
+.text-bitcoin {
+  color: var(--bitcoin, #F7931A);
+}
+
+.bg-bitcoin {
+  background-color: var(--bitcoin, #F7931A);
+}
+
+.bg-bitcoin-dark {
+  background-color: var(--bitcoin-dark, #E07D16);
+}
+
+.hover\:bg-bitcoin-dark:hover {
+  background-color: var(--bitcoin-dark, #E07D16);
+}
+
+.focus\:ring-bitcoin:focus {
+  --tw-ring-color: var(--bitcoin, #F7931A);
 }
 
 body {

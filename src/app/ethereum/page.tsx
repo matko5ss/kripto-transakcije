@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Pretrazivac from "@/components/Pretrazivac";
 import PodaciKartica from "@/components/PodaciKartica";
 import TransakcijeTabela from "@/components/TransakcijeTabela";
 import CijenaGrafikon from "@/components/CijenaGrafikon";
+import EthereumStatusSimple from "@/components/EthereumStatusSimple";
+import DuneEchoWrapper from "@/components/DuneEchoWrapper";
+import PythonDuneEchoWrapper from "@/components/PythonDuneEchoWrapper";
 import {
   dohvatiTransakcije,
   dohvatiCijenuEthera,
@@ -22,9 +26,14 @@ import {
   FaCubes,
   FaEthereum,
   FaNetworkWired,
+  FaWallet,
+  FaPython
 } from "react-icons/fa";
 
 export default function EthereumPage() {
+  const searchParams = useSearchParams();
+  const adresa = searchParams.get('adresa');
+  
   const [transakcije, setTransakcije] = useState<Transakcija[]>([]);
   const [blokovi, setBlokovi] = useState<Blok[]>([]);
   const [cijenaEthera, setCijenaEthera] = useState<number>(0);
@@ -34,6 +43,7 @@ export default function EthereumPage() {
   const [gasCijena, setGasCijena] = useState<string>("Učitavanje...");
   const [loading, setLoading] = useState<boolean>(true);
   const [lastUpdated, setLastUpdated] = useState<string>("");
+  const [adresaTransakcije, setAdresaTransakcije] = useState<Transakcija[]>([]);
 
   // Funkcija za dohvaćanje podataka
   async function fetchData() {
@@ -51,6 +61,18 @@ export default function EthereumPage() {
         setGasCijena(staticData.gasCijena);
         setLoading(false);
         return;
+      }
+      
+      // Ako je adresa dostupna, dohvaćamo transakcije za tu adresu
+      if (adresa) {
+        try {
+          const adresaTransakcijeData = await dohvatiTransakcije(adresa, 10);
+          if (adresaTransakcijeData && adresaTransakcijeData.length > 0) {
+            setAdresaTransakcije(adresaTransakcijeData);
+          }
+        } catch (error) {
+          console.error("Greška pri dohvaćanju transakcija za adresu:", error);
+        }
       }
 
       // Dohvaćamo podatke za početnu stranicu
@@ -238,7 +260,7 @@ export default function EthereumPage() {
 
     // Čistimo interval kada se komponenta unmount-a
     return () => clearInterval(intervalId);
-  }, []);
+  }, [adresa]);
 
   return (
     <div className="space-y-8">
@@ -248,9 +270,36 @@ export default function EthereumPage() {
 
       <Pretrazivac />
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4">
+      {/* Dune Echo Hooks komponenta za prikaz statusa Ethereum mreže u stvarnom vremenu */}
+      <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-xl font-semibold">Stanje Ethereuma u stvarnom vremenu</h2>
+          <div className="text-sm text-gray-500 flex items-center">
+            <span>Osvježava se automatski svakih 10s</span>
+          </div>
+        </div>
+        
+        {/* EthereumStatusSimple komponenta koja koristi Dune API */}
+        <EthereumStatusSimple />
+      </div>
+      
+      {/* Python API komponenta za prikaz statusa Ethereum mreže u stvarnom vremenu */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-xl font-semibold flex items-center">
+            <FaPython className="text-green-600 mr-2" />
+            Stanje Ethereuma u stvarnom vremenu (Python API)
+          </h2>
+          <div className="text-sm text-gray-500 flex items-center">
+            <span>Osvježava se automatski svakih 10s</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Originalne kartice s podacima (sakrivene) */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4 hidden">
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-xl font-semibold">Stanje Ethereuma (statički podaci)</h2>
           <div className="text-sm text-gray-500 flex items-center">
             <span className="mr-2">Osvježava se svakih 10s</span>
             {lastUpdated && (
@@ -266,32 +315,58 @@ export default function EthereumPage() {
             naslov="Ethereum cijena"
             vrijednost={`$${cijenaEthera.toLocaleString('hr-HR', { maximumFractionDigits: 2 })}`}
             ikona={<FaEthereum className="text-blue-500" />}
-            opis="Osvježava se svakih 5s"
             loading={loading}
           />
           <PodaciKartica
             naslov="Zadnji blok"
             vrijednost={zadnjiBlok}
             ikona={<FaCubes className="text-green-500" />}
-            opis="Osvježava se u stvarnom vremenu"
             loading={loading}
           />
           <PodaciKartica
             naslov="Transakcije (ukupno)"
             vrijednost={parseInt(transakcijeCount).toLocaleString('hr-HR')}
             ikona={<FaExchangeAlt className="text-purple-500" />}
-            opis="Osvježava se u stvarnom vremenu"
             loading={loading}
           />
           <PodaciKartica
             naslov="Gas cijena (Gwei)"
             vrijednost={gasCijena}
             ikona={<FaNetworkWired className="text-red-500" />}
-            opis="Osvježava se u stvarnom vremenu"
             loading={loading}
           />
         </div>
       </div>
+
+      {/* Prikaz podataka za adresu ako je unesena */}
+      {adresa && (
+        <div className="mb-8">
+          <div className="flex items-center space-x-2 mb-4">
+            <FaWallet className="text-blue-600" />
+            <h2 className="text-xl font-semibold">Podaci za adresu: {adresa}</h2>
+          </div>
+          
+          {/* Dune Echo komponenta za prikaz tokena i transakcija */}
+          <DuneEchoWrapper adresa={adresa} />
+          
+          {/* Python Dune Echo komponenta za prikaz tokena i transakcija */}
+          <div className="mt-8">
+            <div className="flex items-center space-x-2 mb-4">
+              <FaPython className="text-green-600" />
+              <h2 className="text-xl font-semibold">Python API implementacija</h2>
+            </div>
+            <PythonDuneEchoWrapper adresa={adresa} />
+          </div>
+          
+          {/* Prikaz transakcija za adresu */}
+          {adresaTransakcije.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-3">Zadnje transakcije za adresu</h3>
+              <TransakcijeTabela transakcije={adresaTransakcije} />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <CijenaGrafikon />
