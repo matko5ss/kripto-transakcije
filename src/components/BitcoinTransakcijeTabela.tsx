@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { FaExchangeAlt, FaCube, FaAngleDoubleRight } from "react-icons/fa";
-import Link from "next/link";
-import { BitcoinTransakcija, BitcoinBlok } from "@/services/bitcoinDune";
-import { formatHash, formatSize, formatAge } from "../utils/format";
+import React, { useState, useEffect, useCallback } from "react";
+import { FaExchangeAlt, FaClock, FaCoins, FaFileInvoiceDollar, FaArrowRight, FaInfoCircle } from "react-icons/fa";
+import { BitcoinRealTimeTransaction } from "@/services/bitcoinRealTimeService";
 
 interface BitcoinTransakcijeTabelaProps {
   transakcije: BitcoinTransakcija[];
@@ -141,99 +139,45 @@ export default function BitcoinTransakcijeTabela({
         <div className="flex space-x-2">
           <button
             onClick={() => setAktivnaTabela("transakcije")}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
-              aktivnaTabela === "transakcije"
-                ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"
-                : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-            }`}
-          >
-            <span className="flex items-center">
-              <FaExchangeAlt className="mr-1" />
-              Transakcije
-            </span>
-          </button>
-          
-          <button
-            onClick={() => setAktivnaTabela("blokovi")}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
-              aktivnaTabela === "blokovi"
-                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-                : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-            }`}
-          >
-            <span className="flex items-center">
-              <FaCube className="mr-1" />
-              Blokovi
-            </span>
-          </button>
         </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        {aktivnaTabela === "transakcije" ? (
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead>
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Tx Hash
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Blok
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Od
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  <span className="flex items-center">
-                    <FaAngleDoubleRight className="mr-1" />
-                  </span>
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Prema
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Vrijednost
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+      ) : (
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="flex items-center">
+                  <FaExchangeAlt className="mr-2 text-bitcoin" />
+                  Hash transakcije
+                </div>
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="flex items-center">
+                  <FaClock className="mr-2 text-bitcoin" />
+                  Vrijeme
+                </div>
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="flex items-center">
+                  <FaCoins className="mr-2 text-bitcoin" />
+                  Iznos
+                </div>
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="flex items-center">
+                  <FaFileInvoiceDollar className="mr-2 text-bitcoin" />
                   Naknada
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {transakcije.map((tx) => (
-                <tr
-                  key={tx.txid}
-                  className={`hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                    novaTransakcija === tx.txid
-                      ? "animate-pulse bg-yellow-50 dark:bg-yellow-900/30"
-                      : ""
-                  }`}
-                >
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <Link
-                      href={`/bitcoin/tx/${tx.txid}`}
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      {kratiHash(tx.txid)}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <Link
-                      href={`/bitcoin/blok/${tx.blockHeight}`}
-                      className="text-green-600 dark:text-green-400 hover:underline"
-                    >
-                      {tx.blockHeight}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <Link
-                      href={`/bitcoin/adresa/${tx.senderAddress}`}
-                      className="text-gray-600 dark:text-gray-300 hover:underline"
-                    >
-                      {kratiHash(tx.senderAddress)}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                </div>
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="flex items-center">
+                  <FaInfoCircle className="mr-2 text-bitcoin" />
+                  Detalji
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {transactions.length === 0 ? (
                     <FaAngleDoubleRight className="text-gray-400 dark:text-gray-500 inline-block" />
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">

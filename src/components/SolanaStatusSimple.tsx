@@ -12,7 +12,7 @@ export default function SolanaStatusSimple() {
   const [error, setError] = useState<string | null>(null);
   
   // Koristimo API ključ iz environment varijable
-  const apiKey = process.env.NEXT_PUBLIC_DUNE_API_KEY || 'KbXKuJ2niPQF13TRf1e45ae4hshStmTy';
+  const apiKey = process.env.NEXT_PUBLIC_DUNE_API_KEY || '';
   
   // Funkcija za dohvaćanje podataka o Solana mreži
   const fetchSolanaStatus = useCallback(async () => {

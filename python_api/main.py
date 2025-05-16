@@ -21,7 +21,7 @@ app.add_middleware(
 )
 
 # Dohvati API ključ iz okoline
-DUNE_API_KEY = os.getenv("DUNE_API_KEY", "KbXKuJ2niPQF13TRf1e45ae4hshStmTy")
+DUNE_API_KEY = os.getenv("DUNE_API_KEY", "")
 
 # Ethereum modeli podataka
 class Token(BaseModel):

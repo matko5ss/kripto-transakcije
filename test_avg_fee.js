@@ -1,9 +1,9 @@
-const axios = require('axios');
+import axios from 'axios';
 
 async function testAvgFee() {
   try {
     console.log('Počinjem dohvaćanje prosječne naknade s Dune API-ja (Query ID: 5134500)...');
-    const duneApiKey = 'KbXKuJ2niPQF13TRf1e45ae4hshStmTy';
+    const duneApiKey = process.env.DUNE_API_KEY || '';
     const queryId = '5134500';
     
     // Pokrećemo upit

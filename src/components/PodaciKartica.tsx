@@ -28,7 +28,7 @@ export default function PodaciKartica({ naslov, vrijednost, ikona, boja = 'blue'
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow relative">
       {loading && (
         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg">
-          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       )}
       <div className="flex items-center justify-between mb-4">

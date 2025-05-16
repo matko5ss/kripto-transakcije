@@ -15,7 +15,7 @@ class DuneClient:
     """
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("DUNE_API_KEY", "KbXKuJ2niPQF13TRf1e45ae4hshStmTy")
+        self.api_key = api_key or os.getenv("DUNE_API_KEY", "")
         self.base_url = "https://api.dune.com/v1"
         self.headers = {
             "x-dune-api-key": self.api_key,

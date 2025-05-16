@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
 // Dune API konfiguracija
-const duneApiKey = 'KbXKuJ2niPQF13TRf1e45ae4hshStmTy'; // Korištenje API ključa
+const duneApiKey = process.env.DUNE_API_KEY || ''; // Korištenje API ključa iz environment varijable
 const duneBaseUrl = 'https://api.dune.com/api/v1';
 
 // Pomoćna funkcija za obradu zahtjeva
